@@ -1,0 +1,58 @@
+[2025-07-25 21:06:00][base_learner.py:360][INFO] [RANK0]: DI-engine DRL Policy
+StochasticMuZeroModelGNN(
+  (representation_network): GNNRepresentationNetwork(
+    (node_embedding): Sequential(
+      (0): Linear(in_features=16, out_features=64, bias=True)
+      (1): ReLU(inplace=True)
+      (2): Linear(in_features=64, out_features=64, bias=True)
+      (3): ReLU(inplace=True)
+    )
+    (gnn_layers): ModuleList(
+      (0): GNNLayer(
+        (linear): Linear(in_features=64, out_features=128, bias=True)
+      )
+      (1-2): 2 x GNNLayer(
+        (linear): Linear(in_features=128, out_features=128, bias=True)
+      )
+    )
+    (readout): Sequential(
+      (0): Linear(in_features=128, out_features=256, bias=True)
+      (1): ReLU(inplace=True)
+      (2): Linear(in_features=256, out_features=256, bias=True)
+      (3): ReLU(inplace=True)
+    )
+    (activation): ReLU(inplace=True)
+  )
+  (prediction_network): Sequential(
+    (0): Linear(in_features=256, out_features=256, bias=True)
+    (1): ReLU(inplace=True)
+    (2): Linear(in_features=256, out_features=256, bias=True)
+    (3): ReLU(inplace=True)
+    (4): Linear(in_features=256, out_features=605, bias=True)
+    (5): ReLU(inplace=True)
+  )
+  (dynamics_network): Sequential(
+    (0): Linear(in_features=288, out_features=256, bias=True)
+    (1): ReLU(inplace=True)
+    (2): Linear(in_features=256, out_features=256, bias=True)
+    (3): ReLU(inplace=True)
+    (4): Linear(in_features=256, out_features=857, bias=True)
+    (5): ReLU(inplace=True)
+  )
+  (afterstate_dynamics_network): Sequential(
+    (0): Linear(in_features=260, out_features=256, bias=True)
+    (1): ReLU(inplace=True)
+    (2): Linear(in_features=256, out_features=256, bias=True)
+    (3): ReLU(inplace=True)
+    (4): Linear(in_features=256, out_features=857, bias=True)
+    (5): ReLU(inplace=True)
+  )
+  (afterstate_prediction_network): Sequential(
+    (0): Linear(in_features=256, out_features=256, bias=True)
+    (1): ReLU(inplace=True)
+    (2): Linear(in_features=256, out_features=256, bias=True)
+    (3): ReLU(inplace=True)
+    (4): Linear(in_features=256, out_features=633, bias=True)
+    (5): ReLU(inplace=True)
+  )
+)
