@@ -10,3 +10,5 @@ xxhash
 einops
 openai
 nltk
+tkinter
+protobuf==3.20.0
