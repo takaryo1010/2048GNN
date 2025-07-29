@@ -83,6 +83,12 @@ class GNNRepresentationNetwork(nn.Module):
 
     def _build_graph(self, obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """観測から動的にグラフ（ノード特徴と隣接行列）を構築"""
+        
+        if obs.dim() == 5:
+            B_orig, S, C_in, H_in, W_in = obs.shape
+            obs = obs.view(B_orig * S, C_in, H_in, W_in)
+        
+        
         B, C, H, W = obs.shape
         num_nodes = H * W
 
@@ -215,10 +221,87 @@ class StochasticMuZeroModelGNN(nn.Module):
             layer_num=3,
             activation=activation
         )
-
+        # 6. Chance Encoderネットワーク (自己教師あり学習用)
+        # 観測からランダム事象を予測するための小さなネットワーク
         # (省略) ChanceEncoderや自己教師あり学習の部分も必要に応じてGNNベースに適合させます。
+        self.chance_encoder = MLP(
+                in_channels=latent_state_dim,
+                hidden_channels=mlp_hidden_dim,
+                out_channels=self.chance_space_size,
+                layer_num=2,
+                activation=activation
+            )
         # この例では主要なネットワークの置き換えに焦点を当てています。
+        # 7. Projection Head (自己教師あり学習用)
+        # 潜在表現を別の特徴空間に射影するためのネットワーク
+        self.projection_head = MLP(
+            in_channels=latent_state_dim,
+            hidden_channels=mlp_hidden_dim,
+            out_channels=latent_state_dim,  # 同じ次元に射影するのが一般的
+            layer_num=2,
+            activation=activation
+        )
+        # 8. Prediction Head (自己教師あり学習用)
+        # projectメソッドとペアで使われる予測ヘッド
+        self.prediction_head_ssl = MLP(
+            in_channels=latent_state_dim,
+            hidden_channels=mlp_hidden_dim,
+            out_channels=latent_state_dim,
+            layer_num=2,
+            activation=activation
+)
+    def get_dynamic_mean(self) -> float:
+        """
+        ダイナミクスネットワークの出力の平均値を取得する（ログ用）
+        """
+        return get_dynamic_mean(self)
 
+    def get_reward_mean(self) -> float:
+        """
+        報酬予測の出力の平均値を取得する（ログ用）
+        """
+        return get_reward_mean(self)
+    # StochasticMuZeroModelGNN クラス内に追加
+    def prediction_ssl(self, project_output: torch.Tensor) -> torch.Tensor:
+        """
+        自己教師あり学習のため、射影された特徴量からターゲットを予測する
+        """
+        return self.prediction_head_ssl(project_output)
+    def project(self, latent_state: torch.Tensor, with_grad: bool = True) -> torch.Tensor:
+        """
+        自己教師あり学習のため、潜在状態を別の空間に射影する
+
+        Arguments:
+            - latent_state (:obj:`torch.Tensor`): 潜在状態テンソル
+            - with_grad (:obj:`bool`): 勾配計算を有効にするか
+        Returns:
+            - (:obj:`torch.Tensor`): 射影されたテンソル
+        """
+        if with_grad:
+            return self.projection_head(latent_state)
+        else:
+            # ターゲットを計算する場合など、勾配を計算しない
+            with torch.no_grad():
+                return self.projection_head(latent_state)
+    def chance_encode(self, obs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        観測データから、ランダム事象（chance）の発生を予測するエンコーダー
+
+        Arguments:
+            - obs (:obj:`torch.Tensor`): 観測データ（盤面）のテンソル
+        Returns:
+            - Tuple[torch.Tensor, torch.Tensor]: chanceの予測ロジットと、そのone-hot表現
+        """
+        # 観測を潜在表現に変換
+        latent_state = self._representation(obs)
+
+        # 潜在表現からchanceのロジットを予測
+        chance_logits = self.chance_encoder(latent_state)
+
+        # 最も可能性の高いchanceをone-hotベクトルに変換
+        chance_one_hot = F.one_hot(torch.argmax(chance_logits, dim=1), self.chance_space_size).float()
+
+        return chance_logits, chance_one_hot
     def _support_to_scalar(self, logits: torch.Tensor) -> torch.Tensor:
         """
         カテゴリカル分布のlogitsをスカラーの期待値に変換します。
@@ -239,11 +322,12 @@ class StochasticMuZeroModelGNN(nn.Module):
         probabilities = torch.softmax(logits, dim=1)
         scalar = torch.sum(probabilities * support, dim=1)
         return scalar
-        def _representation(self, observation: torch.Tensor) -> torch.Tensor:
-            latent_state = self.representation_network(observation)
-            if self.state_norm:
-                latent_state = renormalize(latent_state)
-            return latent_state
+
+    def _representation(self, observation: torch.Tensor) -> torch.Tensor:
+        latent_state = self.representation_network(observation)
+        if self.state_norm:
+            latent_state = renormalize(latent_state)
+        return latent_state
 
     def _prediction(self, latent_state: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         output = self.prediction_network(latent_state)
@@ -272,6 +356,9 @@ class StochasticMuZeroModelGNN(nn.Module):
         return next_latent_state, reward
 
     def _afterstate_dynamics(self, latent_state: torch.Tensor, action: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if action.dim() == 2:
+            action = action.squeeze(1)
+        
         # actionをone-hotベクトルに変換
         action_onehot = F.one_hot(action.long(), num_classes=self.action_space_size).float()
         state_action_encoding = torch.cat((latent_state, action_onehot), dim=1)
@@ -296,9 +383,9 @@ class StochasticMuZeroModelGNN(nn.Module):
             # 学習時は分布をそのまま返す
             return MZNetworkOutput(value, reward_logits, policy_logits, latent_state)
         else:
-            # 評価時はスカラーに変換してリストで返す
+            # 評価時はスカラーに変換して list で返す
             reward_scalar = self._support_to_scalar(reward_logits)
-            return MZNetworkOutput(value, list(reward_scalar), policy_logits, latent_state)
+            return MZNetworkOutput(value, reward_scalar.tolist(), policy_logits, latent_state)
 
     def recurrent_inference(self, state: torch.Tensor, option: torch.Tensor, afterstate: bool = False) -> MZNetworkOutput:
         if afterstate:
@@ -314,9 +401,9 @@ class StochasticMuZeroModelGNN(nn.Module):
             # 学習時は分布をそのまま返す
             return MZNetworkOutput(value, reward_logits, policy_logits, next_latent_state)
         else:
-            # 評価時はスカラーに変換してリストで返す
+            # 評価時はスカラーに変換して list で返す
             reward_scalar = self._support_to_scalar(reward_logits)
-            return MZNetworkOutput(value, list(reward_scalar), policy_logits, next_latent_state)
+            return MZNetworkOutput(value, reward_scalar.tolist(), policy_logits, next_latent_state)
 
     def get_params_mean(self) -> float:
         return get_params_mean(self)
