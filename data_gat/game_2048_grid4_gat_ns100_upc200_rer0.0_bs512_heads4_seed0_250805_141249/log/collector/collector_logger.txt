@@ -1,0 +1,45 @@
+[2025-08-05 14:14:50][muzero_collector.py:832][INFO] collect end:
+episode_count: 16
+envstep_count: 1145
+avg_envstep_per_episode: 71.5625
+avg_envstep_per_sec: 15.888569582514853
+avg_episode_per_sec: 0.2220236797556661
+collect_time: 72.06438528362278
+reward_mean: 503.75
+reward_std: 273.5780281747787
+reward_max: 1168.0
+reward_min: 156.0
+total_envstep_count: 1145
+total_episode_count: 16
+total_duration: 178.39054780148462
+visit_entropy: 1.667544488125579
+[2025-08-05 14:15:48][muzero_collector.py:832][INFO] collect end:
+episode_count: 8
+envstep_count: 531
+avg_envstep_per_episode: 66.375
+avg_envstep_per_sec: 19.008078570050962
+avg_episode_per_sec: 0.28637406508551355
+collect_time: 27.935490588545917
+reward_mean: 410.5
+reward_std: 146.20448009551555
+reward_max: 624.0
+reward_min: 260.0
+total_envstep_count: 1676
+total_episode_count: 24
+total_duration: 234.26152897857645
+visit_entropy: 1.4523046228874619
+[2025-08-05 14:17:03][muzero_collector.py:832][INFO] collect end:
+episode_count: 8
+envstep_count: 757
+avg_envstep_per_episode: 94.625
+avg_envstep_per_sec: 15.78079586972054
+avg_episode_per_sec: 0.16677195106705986
+collect_time: 47.96969723513733
+reward_mean: 784.0
+reward_std: 456.77565609388597
+reward_max: 1432.0
+reward_min: 216.0
+total_envstep_count: 2433
+total_episode_count: 32
+total_duration: 330.20092344885114
+visit_entropy: 1.596962805839567
