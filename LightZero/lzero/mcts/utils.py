@@ -97,11 +97,65 @@ def prepare_observation(observation_list, model_type='conv'):
     Returns:
         - np.ndarray: Reshaped array of observations.
     """
-    assert model_type in ['conv', 'mlp', 'conv_context', 'mlp_context'], "model_type must be either 'conv' or 'mlp'"
-    observation_array = np.array(observation_list)
+    assert model_type in ['conv', 'mlp', 'conv_context', 'mlp_context', 'gat'], "model_type must be 'conv', 'mlp', 'conv_context', 'mlp_context', or 'gat'"
+    
+    # Special handling for GAT model if observation shapes are inconsistent
+    if model_type == 'gat':
+        try:
+            observation_array = np.array(observation_list)
+        except ValueError as e:
+            print(f"DEBUG GAT: Initial array creation failed: {e}")
+            print(f"DEBUG GAT: observation_list length: {len(observation_list)}")
+            print(f"DEBUG GAT: First few element shapes: {[np.array(obs).shape for obs in observation_list[:5]]}")
+            
+            # Handle inconsistent shapes by processing each observation individually
+            processed_obs = []
+            for i, obs in enumerate(observation_list):
+                if isinstance(obs, list):
+                    if len(obs) == 1:
+                        # Extract the single observation from nested list
+                        processed_obs.append(obs[0])
+                    else:
+                        print(f"DEBUG GAT: Found list with length {len(obs)} at index {i}")
+                        # Take first element or handle differently
+                        processed_obs.append(obs[0] if obs else np.zeros((16, 4, 4)))
+                else:
+                    processed_obs.append(obs)
+            
+            try:
+                observation_array = np.array(processed_obs)
+                print(f"DEBUG GAT: Successfully created array with shape: {observation_array.shape}")
+            except ValueError as e2:
+                print(f"DEBUG GAT: Second attempt failed: {e2}")
+                # Final fallback: ensure all observations have the same shape
+                shapes = [np.array(obs).shape for obs in processed_obs]
+                print(f"DEBUG GAT: Processed observation shapes: {set(shapes)}")
+                # Force all to be the same shape as the first valid one
+                target_shape = shapes[0] if shapes else (16, 4, 4)
+                final_obs = []
+                for obs in processed_obs:
+                    obs_array = np.array(obs)
+                    if obs_array.shape == target_shape:
+                        final_obs.append(obs_array)
+                    else:
+                        print(f"DEBUG GAT: Reshaping from {obs_array.shape} to {target_shape}")
+                        # Try to reshape or pad
+                        if obs_array.size == np.prod(target_shape):
+                            final_obs.append(obs_array.reshape(target_shape))
+                        else:
+                            final_obs.append(np.zeros(target_shape))
+                observation_array = np.array(final_obs)
+        
+        # Ensure float32 type for GAT compatibility
+        observation_array = observation_array.astype(np.float32)
+    else:
+        observation_array = np.array(observation_list)
+        # Ensure float32 type for consistency
+        observation_array = observation_array.astype(np.float32)
+    
     batch_size = observation_array.shape[0]
 
-    if model_type in ['conv', 'conv_context']:
+    if model_type in ['conv', 'conv_context', 'gat']:  # GAT uses similar format as conv
         if observation_array.ndim == 3:
             # Add a channel dimension if it's missing
             observation_array = observation_array[..., np.newaxis]

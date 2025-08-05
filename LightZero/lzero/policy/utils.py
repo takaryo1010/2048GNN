@@ -395,8 +395,12 @@ def prepare_obs(obs_batch_ori: np.ndarray, cfg: EasyDict) -> Tuple[torch.Tensor,
     # Calculate the dimension size to slice based on the model configuration.
     # For convolutional models ('conv'), use the number of frames to stack times the number of channels.
     # For multi-layer perceptron models ('mlp'), use the number of frames to stack times the size of the observation space.
-    stack_dim = cfg.model.frame_stack_num * (
-        cfg.model.image_channel if cfg.model.model_type in ['conv', 'conv_context'] else cfg.model.observation_shape)
+    # For GAT models ('gat'), treat them like conv models
+    if cfg.model.model_type in ['conv', 'conv_context', 'gat']:
+        stack_dim = cfg.model.frame_stack_num * cfg.model.image_channel
+    else:
+        # For mlp models
+        stack_dim = cfg.model.frame_stack_num * cfg.model.observation_shape
 
     # Slice the original observation tensor to obtain the batch for the initial inference.
     obs_batch = obs_batch_ori[:, :stack_dim]
@@ -406,9 +410,12 @@ def prepare_obs(obs_batch_ori: np.ndarray, cfg: EasyDict) -> Tuple[torch.Tensor,
     # If the model configuration specifies the use of self-supervised learning loss, prepare the target batch for the consistency loss.
     if cfg.model.self_supervised_learning_loss:
         # Determine the starting dimension to exclude based on the model type.
-        # For 'conv', exclude the first 'image_channel' dimensions.
+        # For 'conv' and 'gat', exclude the first 'image_channel' dimensions.
         # For 'mlp', exclude the first 'observation_shape' dimensions.
-        exclude_dim = cfg.model.image_channel if cfg.model.model_type in ['conv', 'conv_context'] else cfg.model.observation_shape
+        if cfg.model.model_type in ['conv', 'conv_context', 'gat']:
+            exclude_dim = cfg.model.image_channel
+        else:
+            exclude_dim = cfg.model.observation_shape
 
         # Slice the original observation tensor to obtain the batch for consistency loss calculation.
         obs_target_batch = obs_batch_ori[:, exclude_dim:]

@@ -25,7 +25,7 @@ from lzero.policy import scalar_transform, InverseScalarTransform, cross_entropy
 class MuZeroPolicy(Policy):
     """
     Overview:
-        if self._cfg.model.model_type in ["conv", "mlp"]:
+        if self._cfg.model.model_type in ["conv", "mlp", "gat"]:
             The policy class for MuZero.
         if self._cfg.model.model_type == ["conv_context", "mlp_context"]:
             The policy class for MuZero w/ Context, a variant of MuZero.
@@ -37,8 +37,8 @@ class MuZeroPolicy(Policy):
     # The default_config for MuZero policy.
     config = dict(
         model=dict(
-            # (str) The model type. For 1-dimensional vector obs, we use mlp model. For the image obs, we use conv model.
-            model_type='conv',  # options={'mlp', 'conv'}
+            # (str) The model type. For 1-dimensional vector obs, we use mlp model. For the image obs, we use conv model. For graph-based obs, we use gat model.
+            model_type='conv',  # options={'mlp', 'conv', 'gat'}
             # (bool) If True, the action space of the environment is continuous, otherwise discrete.
             continuous_action_space=False,
             # (tuple) The stacked obs shape.
@@ -254,6 +254,8 @@ class MuZeroPolicy(Policy):
             return 'MuZeroModelMLP', ['lzero.model.muzero_model_mlp']
         elif self._cfg.model.model_type == "conv_context":
             return 'MuZeroContextModel', ['lzero.model.muzero_context_model']
+        elif self._cfg.model.model_type == "gat":
+            return 'GATMuZeroModel', ['lzero.model.gat_muzero_model']
         else:
             raise ValueError("model type {} is not supported".format(self._cfg.model.model_type))
 
@@ -730,7 +732,7 @@ class MuZeroPolicy(Policy):
             ready_env_id = np.arange(active_collect_env_num)
         output = {i: None for i in ready_env_id}
         with torch.no_grad():
-            if self._cfg.model.model_type in ["conv", "mlp"]:
+            if self._cfg.model.model_type in ["conv", "mlp", "gat"]:
                 network_output = self._collect_model.initial_inference(data)
             elif self._cfg.model.model_type == "conv_context":
                 network_output = self._collect_model.initial_inference(self.last_batch_obs, self.last_batch_action,
@@ -883,7 +885,7 @@ class MuZeroPolicy(Policy):
             ready_env_id = np.arange(active_eval_env_num)
         output = {i: None for i in ready_env_id}
         with torch.no_grad():
-            if self._cfg.model.model_type in ["conv", "mlp"]:
+            if self._cfg.model.model_type in ["conv", "mlp", "gat"]:
                 network_output = self._eval_model.initial_inference(data)
             elif self._cfg.model.model_type == "conv_context":
                 network_output = self._eval_model.initial_inference(self.last_batch_obs, self.last_batch_action, data)

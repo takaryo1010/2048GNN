@@ -1,5 +1,6 @@
 from easydict import EasyDict
-from lzero.model.stochastic_muzero_model_gnn import StochasticMuZeroModelGNN
+
+
 # ==============================================================
 # begin of the most frequently changed config specified by the user
 # ==============================================================
@@ -15,17 +16,25 @@ batch_size = 512
 max_env_step = int(1e9)
 reanalyze_ratio = 0.
 num_of_possible_chance_tile = 2
-chance_space_size = 16 * num_of_possible_chance_tile # 4x4盤面の場合
+chance_space_size = 16 * num_of_possible_chance_tile
+
+# GAT-specific configurations
+grid_size = 4  # Can be changed to 3 for 3x3 boards
+num_heads = 4
+hidden_channels = 64
+num_gat_layers = 3
+state_dim = 256
+dropout = 0.1
 # ==============================================================
 # end of the most frequently changed config specified by the user
 # ==============================================================
 
-game_2048_stochastic_muzero_config = dict(
-    exp_name=f'data_stochastic_mz_gnn/game_2048_gnn_ns{num_simulations}_upc{update_per_collect}_bs{batch_size}_seed0',
+game_2048_gat_muzero_config = dict(
+    exp_name=f'data_gat_mz/game_2048_grid{grid_size}_gat_muzero_ns{num_simulations}_upc{update_per_collect}_rer{reanalyze_ratio}_bs{batch_size}_heads{num_heads}_seed0',
     env=dict(
         stop_value=int(1e6),
         env_id=env_id,
-        obs_shape=(16, 4, 4),
+        obs_shape=(16, grid_size, grid_size),
         obs_type='dict_encoded_board',
         num_of_possible_chance_tile=num_of_possible_chance_tile,
         collector_env_num=collector_env_num,
@@ -35,18 +44,26 @@ game_2048_stochastic_muzero_config = dict(
     ),
     policy=dict(
         model=dict(
-            type='StochasticMuZeroModelGNN',
-            observation_shape=(16, 4, 4),
+            observation_shape=(16, grid_size, grid_size),
             action_space_size=action_space_size,
-            chance_space_size=chance_space_size,
-            node_embed_dim=64,
-            gnn_hidden_dim=128,
-            gnn_num_layers=3,
-            latent_state_dim=256,
-            mlp_hidden_dim=256,
-            self_supervised_learning_loss=True,
-            discrete_action_encoding_type='one_hot',
+            # GAT-specific parameters
+            num_heads=num_heads,
+            hidden_channels=hidden_channels,
+            num_gat_layers=num_gat_layers,
+            state_dim=state_dim,
+            dropout=dropout,
+            # Standard MuZero parameters
+            value_head_channels=16,
+            policy_head_channels=16,
+            value_head_hidden_channels=[32],
+            policy_head_hidden_channels=[32],
+            reward_support_size=601,
+            value_support_size=601,
+            categorical_distribution=True,
+            last_linear_layer_init_zero=True,
+            state_norm=False,
         ),
+        # (str) The path of the pretrained model. If None, the model will be initialized by the default model.
         model_path=None,
         use_ture_chance_label_in_chance_encoder=use_ture_chance_label_in_chance_encoder,
         cuda=True,
@@ -62,7 +79,7 @@ game_2048_stochastic_muzero_config = dict(
         weight_decay=1e-4,
         num_simulations=num_simulations,
         reanalyze_ratio=reanalyze_ratio,
-        ssl_loss_weight=2,
+        ssl_loss_weight=0,  # Disable SSL for GAT model
         n_episode=n_episode,
         eval_freq=int(2e3),
         replay_buffer_size=int(1e6),
@@ -70,33 +87,33 @@ game_2048_stochastic_muzero_config = dict(
         evaluator_env_num=evaluator_env_num,
     ),
 )
-game_2048_stochastic_muzero_config = EasyDict(game_2048_stochastic_muzero_config)
-main_config = game_2048_stochastic_muzero_config
+game_2048_gat_muzero_config = EasyDict(game_2048_gat_muzero_config)
+main_config = game_2048_gat_muzero_config
 
-game_2048_stochastic_muzero_create_config = dict(
+game_2048_gat_muzero_create_config = dict(
     env=dict(
         type='game_2048',
         import_names=['zoo.game_2048.envs.game_2048_env'],
     ),
     env_manager=dict(type='subprocess'),
     policy=dict(
-        type='stochastic_muzero',
-        import_names=['lzero.policy.stochastic_muzero'],
+        type='muzero',  # Use standard muzero policy
+        import_names=['lzero.policy.muzero'],
     ),
-    # ▼▼▼ モデルのインポートパスを指定 ▼▼▼
-    model=dict(
-        type='StochasticMuZeroModelGNN',
-        import_names=['zoo.game_2048.model.stochastic_muzero_model_gnn'],
-    )
 )
-game_2048_stochastic_muzero_create_config = EasyDict(game_2048_stochastic_muzero_create_config)
-create_config = game_2048_stochastic_muzero_create_config
+game_2048_gat_muzero_create_config = EasyDict(game_2048_gat_muzero_create_config)
+create_config = game_2048_gat_muzero_create_config
 
 if __name__ == "__main__":
     from lzero.entry import train_muzero
+    # CUDAが使えるかチェック
     import torch
     if torch.cuda.is_available():
         print("CUDA is available. Training on GPU.")
     else:
         print("CUDA is not available. Training on CPU.")
+    
+    print(f"Training GAT-based MuZero on {grid_size}x{grid_size} grid")
+    print(f"Model config: {num_heads} heads, {hidden_channels} hidden channels, {num_gat_layers} GAT layers")
+    
     train_muzero([main_config, create_config], seed=0, model_path=main_config.policy.model_path, max_env_step=max_env_step)
