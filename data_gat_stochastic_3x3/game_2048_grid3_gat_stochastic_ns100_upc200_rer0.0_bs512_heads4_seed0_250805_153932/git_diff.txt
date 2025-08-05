@@ -1,0 +1,284 @@
+diff --git a/LightZero/lzero/model/gat_stochastic_muzero_model.py b/LightZero/lzero/model/gat_stochastic_muzero_model.py
+index a0ae8a7..bcba018 100644
+--- a/LightZero/lzero/model/gat_stochastic_muzero_model.py
++++ b/LightZero/lzero/model/gat_stochastic_muzero_model.py
+@@ -11,6 +11,7 @@ from ding.utils import MODEL_REGISTRY, SequenceType
+ 
+ from .common import MZNetworkOutput
+ from .utils import renormalize, get_params_mean, get_dynamic_mean, get_reward_mean
++from .stochastic_muzero_model import StochasticMuZeroModel
+ 
+ 
+ class GridToGraphConverter:
+@@ -311,210 +312,52 @@ class GATAfterstateDynamicsNetwork(nn.Module):
+ 
+ 
+ @MODEL_REGISTRY.register('GATStochasticMuZeroModel')
+-class GATStochasticMuZeroModel(nn.Module):
++class GATStochasticMuZeroModel(StochasticMuZeroModel):
+     """
+-    StochasticMuZero model using Graph Attention Networks for 2048 game
+-    Supports both 3x3 and 4x4 board sizes with stochastic environment modeling
++    GAT-enhanced StochasticMuZero model for 2048 game with dynamic size adaptation
++    Supports both 3x3 and 4x4 board sizes
+     """
+     
+-    def __init__(
+-        self,
+-        observation_shape: SequenceType = (16, 4, 4),
+-        action_space_size: int = 4,
+-        chance_space_size: int = 32,
+-        num_heads: int = 4,
+-        hidden_channels: int = 64,
+-        num_gat_layers: int = 3,
+-        state_dim: int = 256,
+-        value_head_channels: int = 16,
+-        policy_head_channels: int = 16,
+-        value_head_hidden_channels: SequenceType = [32],
+-        policy_head_hidden_channels: SequenceType = [32],
+-        reward_support_size: int = 601,
+-        value_support_size: int = 601,
+-        categorical_distribution: bool = True,
+-        last_linear_layer_init_zero: bool = True,
+-        state_norm: bool = False,
+-        dropout: float = 0.1,
+-        *args,
+-        **kwargs
+-    ):
+-        super().__init__()
+-        
+-        # Determine grid size from observation shape
+-        self.grid_size = observation_shape[-1]
+-        assert self.grid_size in [3, 4], f"Only 3x3 and 4x4 grids supported, got {self.grid_size}x{self.grid_size}"
+-        
+-        self.action_space_size = action_space_size
+-        self.chance_space_size = chance_space_size
+-        self.state_dim = state_dim
+-        self.categorical_distribution = categorical_distribution
+-        self.state_norm = state_norm
+-        
+-        if categorical_distribution:
+-            self.reward_support_size = reward_support_size
+-            self.value_support_size = value_support_size
++    def __init__(self, **config):
++        # Extract observation shape and calculate board size
++        observation_shape = config.get('observation_shape', [16, 4, 4])
++        if len(observation_shape) == 1:
++            # For 1D observation shape (e.g., 16), assume square grid
++            grid_size = int((observation_shape[0] / 16) ** 0.5)
++        elif len(observation_shape) == 3:
++            # For 3D observation shape [channels, height, width]
++            grid_size = observation_shape[1]  # Assume square grid
+         else:
+-            self.reward_support_size = 1
+-            self.value_support_size = 1
+-        
+-        # Representation network (encoder)
+-        self.representation_network = GATRepresentationNetwork(
+-            grid_size=self.grid_size,
+-            input_channels=observation_shape[0],
+-            hidden_channels=hidden_channels,
+-            num_heads=num_heads,
+-            num_layers=num_gat_layers,
+-            output_dim=state_dim,
+-            dropout=dropout
+-        )
+-        
+-        # Afterstate dynamics network (deterministic)
+-        self.afterstate_dynamics_network = GATAfterstateDynamicsNetwork(
+-            grid_size=self.grid_size,
+-            state_dim=state_dim,
+-            action_space_size=action_space_size,
+-            hidden_channels=hidden_channels,
+-            num_heads=num_heads,
+-            num_layers=num_gat_layers - 1,
+-            dropout=dropout
+-        )
+-        
+-        # Chance encoder (stochastic)
+-        self.chance_encoder = GATChanceEncoder(
+-            grid_size=self.grid_size,
+-            chance_space_size=chance_space_size,
+-            hidden_channels=hidden_channels,
+-            num_heads=num_heads,
+-            num_layers=num_gat_layers - 1,
+-            output_dim=state_dim,
+-            dropout=dropout
+-        )
+-        
+-        # Reward prediction from afterstate
+-        self.reward_head_afterstate = MLP(
+-            in_channels=state_dim,
+-            hidden_channels=value_head_hidden_channels[0],
+-            out_channels=self.reward_support_size,
+-            layer_num=len(value_head_hidden_channels) + 1,
+-            activation=nn.ReLU(),
+-            norm_type='LN',
+-            output_activation=False,
+-            output_norm=False,
+-            last_linear_layer_init_zero=last_linear_layer_init_zero
+-        )
+-        
+-        # Value and policy heads
+-        self.value_head = MLP(
+-            in_channels=state_dim,
+-            hidden_channels=value_head_hidden_channels[0],
+-            out_channels=self.value_support_size,
+-            layer_num=len(value_head_hidden_channels) + 1,
+-            activation=nn.ReLU(),
+-            norm_type='LN',
+-            output_activation=False,
+-            output_norm=False,
+-            last_linear_layer_init_zero=last_linear_layer_init_zero
+-        )
++            grid_size = 4  # Default fallback
+         
+-        self.policy_head = MLP(
+-            in_channels=state_dim,
+-            hidden_channels=policy_head_hidden_channels[0],
+-            out_channels=action_space_size,
+-            layer_num=len(policy_head_hidden_channels) + 1,
+-            activation=nn.ReLU(),
+-            norm_type='LN',
+-            output_activation=False,
+-            output_norm=False,
+-            last_linear_layer_init_zero=last_linear_layer_init_zero
+-        )
+-    
+-    def initial_inference(self, observation):
+-        """Initial inference for MCTS"""
+-        batch_size = observation.shape[0]
+-        device = observation.device
++        # Calculate flatten input size based on actual grid size
++        # This should match what PredictionNetwork expects: grid_size * grid_size * 16
++        flatten_input_size = grid_size * grid_size * 16
+         
+-        # Encode observation to latent state
+-        latent_state = self._representation(observation)
++        # Update config with calculated sizes for PredictionNetwork compatibility
++        config['flatten_input_size_for_value_head'] = flatten_input_size
++        config['flatten_input_size_for_policy_head'] = flatten_input_size
+         
+-        # Predict value and policy
+-        value, policy_logits = self._prediction(latent_state)
++        # Store grid size for GAT networks
++        self.grid_size = grid_size
+         
+-        # Return zero reward for initial inference
+-        if self.categorical_distribution:
+-            if not self.training:
+-                reward = [0. for _ in range(batch_size)]
+-            else:
+-                reward = torch.zeros(batch_size, self.reward_support_size).to(device)
+-        else:
+-            reward = [0. for _ in range(batch_size)]
++        # Initialize parent StochasticMuZero model with updated config
++        super().__init__(**config)
+         
+-        return MZNetworkOutput(
+-            value=value,
+-            reward=reward,
+-            policy_logits=policy_logits,
+-            latent_state=latent_state
++        # Override representation network with GAT
++        self.representation_network = GATRepresentationNetwork(
++            grid_size=grid_size,
++            input_channels=observation_shape[0] if len(observation_shape) == 3 else 16,
++            hidden_channels=config.get('gat_hidden_channels', 64),
++            num_heads=config.get('gat_heads', 4),
++            num_layers=config.get('gat_layers', 3),
++            output_dim=config.get('latent_state_dim', 256),
++            dropout=config.get('dropout', 0.1),
+         )
+-    
+-    def recurrent_inference(self, latent_state, action, chance):
+-        """Recurrent inference for MCTS expansion with chance"""
+-        # Apply afterstate dynamics (deterministic)
+-        afterstate = self._afterstate_dynamics(latent_state, action)
+-        
+-        # Predict reward from afterstate
+-        reward = self._afterstate_reward(afterstate)
+-        
+-        # Apply chance encoding (stochastic)
+-        next_latent_state = self._chance_encoding(afterstate, chance)
+         
+-        # Predict value and policy for next state
+-        value, policy_logits = self._prediction(next_latent_state)
+-        
+-        return MZNetworkOutput(
+-            value=value,
+-            reward=reward,
+-            policy_logits=policy_logits,
+-            latent_state=next_latent_state
+-        )
+-    
+-    def _representation(self, observation):
+-        """Encode observation to latent state"""
+-        latent_state = self.representation_network(observation)
+-        if self.state_norm:
+-            latent_state = renormalize(latent_state)
+-        return latent_state
+-    
+-    def _afterstate_dynamics(self, latent_state, action):
+-        """Predict afterstate (deterministic dynamics)"""
+-        afterstate = self.afterstate_dynamics_network(latent_state, action)
+-        if self.state_norm:
+-            afterstate = renormalize(afterstate)
+-        return afterstate
+-    
+-    def _chance_encoding(self, afterstate, chance):
+-        """Apply chance to afterstate (stochastic dynamics)"""
+-        # Convert afterstate back to grid representation for chance encoding
+-        grid_repr = afterstate.view(-1, 16, self.grid_size, self.grid_size)
+-        next_state = self.chance_encoder(grid_repr, chance)
+-        if self.state_norm:
+-            next_state = renormalize(next_state)
+-        return next_state
+-    
+-    def _afterstate_reward(self, afterstate):
+-        """Predict reward from afterstate"""
+-        return self.reward_head_afterstate(afterstate)
+-    
+-    def _prediction(self, latent_state):
+-        """Predict value and policy"""
+-        value = self.value_head(latent_state)
+-        policy_logits = self.policy_head(latent_state)
+-        return value, policy_logits
+-    
+-    def get_params_mean(self):
+-        return get_params_mean(self)
+-    
+-    def get_dynamic_mean(self):
+-        return get_dynamic_mean(self)
+-    
+-    def get_reward_mean(self):
+-        return get_reward_mean(self)
++        # Replace dynamics network with GAT version if needed
++        # Note: We can further customize other networks with GAT if desired
++        print(f"GAT StochasticMuZero Model initialized for {grid_size}x{grid_size} grid")
++        print(f"Flatten input size: {flatten_input_size}")
++        print(f"GAT config: {config.get('gat_heads', 4)} heads, {config.get('gat_hidden_channels', 64)} hidden channels, {config.get('gat_layers', 3)} layers")
++        print(f"StochasticMuZero config: chance_space_size={config.get('chance_space_size', 32)}, use_chance_encoder={config.get('use_chance_encoder', True)}")
+diff --git a/LightZero/zoo/game_2048/config/gat_stochastic_2048_config.py b/LightZero/zoo/game_2048/config/gat_stochastic_2048_config.py
+index 36034ee..e7b3274 100644
+--- a/LightZero/zoo/game_2048/config/gat_stochastic_2048_config.py
++++ b/LightZero/zoo/game_2048/config/gat_stochastic_2048_config.py
+@@ -49,6 +49,7 @@ game_2048_gat_stochastic_config = dict(
+         type='stochastic_muzero',  # Use standard stochastic_muzero type for compatibility
+         model=dict(
+             # StochasticMuZero model configuration  
++            type='GATStochasticMuZeroModel',  # Use GAT-enhanced StochasticMuZero model
+             model_type='conv',  # Use conv type for compatibility with existing policy
+             model='gat_stochastic',   # Use GAT-based StochasticMuZero
+             observation_shape=(16, grid_size, grid_size),
+@@ -78,6 +79,10 @@ game_2048_gat_stochastic_config = dict(
+             categorical_distribution=True,
+             last_linear_layer_init_zero=True,
+             state_norm=False,
++            
++            # Force correct flatten input size for 4x4 board
++            flatten_input_size_for_value_head=256,  # 4*4*16
++            flatten_input_size_for_policy_head=256,  # 4*4*16
+             self_supervised_learning_loss=True,  # Enable SSL for obs_target_batch generation
+         ),
+         model_path=None,

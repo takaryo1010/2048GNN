@@ -1,0 +1,118 @@
+16f5a38
+
+commit 16f5a3803c06fb8d416e143dc7dcd046a1336279
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Tue Aug 5 15:15:45 2025 +0900
+
+    add:stochasticGNN
+
+ LightZero/lzero/model/__init__.py                  |   1 +
+ .../lzero/model/gat_stochastic_muzero_model.py     | 520 +++++++++++++++++++++
+ LightZero/lzero/policy/gat_stochastic_muzero.py    | 106 +++++
+ .../game_2048/config/gat_2048_transfer_config.py   |   0
+ .../game_2048/config/gat_stochastic_2048_config.py | 152 ++++++
+ 5 files changed, 779 insertions(+)
+
+commit 9735dfb1adeeb5eb815eabc113557c58653d78ee
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Tue Aug 5 14:48:37 2025 +0900
+
+    GNNpush
+
+ .gitignore                                         |   1 +
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 4658370 bytes
+ .../formatted_total_config.py                      | 239 +++++++
+ .../git_diff.txt                                   | 671 ++++++++++++++++++
+ .../git_log.txt                                    | 749 +++++++++++++++++++++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 |  76 +++
+ .../events.out.tfevents.1754370567.7de97ae767c2    | Bin 0 -> 1828 bytes
+ .../total_config.py                                | 239 +++++++
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 2789962 bytes
+ .../ckpt/iteration_0.pth.tar                       | Bin 0 -> 5544414 bytes
+ .../formatted_total_config.py                      | 240 +++++++
+ .../git_diff.txt                                   | 671 ++++++++++++++++++
+ .../git_log.txt                                    | 749 +++++++++++++++++++++
+ .../log/collector/collector_logger.txt             |  45 ++
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 | 350 ++++++++++
+ .../events.out.tfevents.1754370777.7de97ae767c2    | Bin 0 -> 35412 bytes
+ .../total_config.py                                | 240 +++++++
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 4658370 bytes
+ .../formatted_total_config.py                      | 240 +++++++
+ .../git_diff.txt                                   | 671 ++++++++++++++++++
+ .../git_log.txt                                    | 749 +++++++++++++++++++++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 |  76 +++
+ .../events.out.tfevents.1754371096.7de97ae767c2    | Bin 0 -> 1828 bytes
+ .../total_config.py                                | 240 +++++++
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 4658370 bytes
+ .../formatted_total_config.py                      | 240 +++++++
+ .../git_diff.txt                                   | 705 +++++++++++++++++++
+ .../git_log.txt                                    | 749 +++++++++++++++++++++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 |  76 +++
+ .../events.out.tfevents.1754371285.7de97ae767c2    | Bin 0 -> 1828 bytes
+ .../total_config.py                                | 240 +++++++
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 4658370 bytes
+ .../ckpt/iteration_0.pth.tar                       | Bin 0 -> 9323092 bytes
+ .../formatted_total_config.py                      | 240 +++++++
+ .../git_diff.txt                                   | 705 +++++++++++++++++++
+ .../git_log.txt                                    | 749 +++++++++++++++++++++
+ .../log/collector/collector_logger.txt             |  15 +
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 | 191 ++++++
+ .../events.out.tfevents.1754371491.7de97ae767c2    | Bin 0 -> 15456 bytes
+ .../total_config.py                                | 240 +++++++
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 4658370 bytes
+ .../ckpt/iteration_0.pth.tar                       | Bin 0 -> 9323092 bytes
+ .../formatted_total_config.py                      | 240 +++++++
+ .../git_diff.txt                                   | 705 +++++++++++++++++++
+ .../git_log.txt                                    | 749 +++++++++++++++++++++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 | 153 +++++
+ .../events.out.tfevents.1754372382.7de97ae767c2    | Bin 0 -> 9228 bytes
+ .../total_config.py                                | 240 +++++++
+ test_gat_model.py                                  | 152 +++++
+ 59 files changed, 12773 insertions(+)
+
+commit dd6da5f0159ed21bc70c52539c920fe31a847f82
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Tue Aug 5 14:47:09 2025 +0900
+
+    GNN実装できたかも
+
+ LightZero/lzero/mcts/utils.py                      |  60 ++-
+ LightZero/lzero/model/__init__.py                  |   1 +
+ LightZero/lzero/model/gat_muzero_model.py          | 433 +++++++++++++++++++++
+ .../lzero/model/stochastic_muzero_model_gnn.py     | 409 -------------------
+ LightZero/lzero/policy/muzero.py                   |  12 +-
+ LightZero/lzero/policy/utils.py                    |  15 +-
+ .../zoo/game_2048/config/gat_2048_3x3_config.py    | 122 ++++++
+ LightZero/zoo/game_2048/config/gat_2048_config.py  | 131 +++++++
+ .../game_2048/config/gat_muzero_2048_3x3_config.py | 119 ++++++
+ ...ro_2048_config.py => gat_muzero_2048_config.py} |  75 ++--
+ .../config/stochastic_muzero_2048_config.py        |   2 +-
+ 11 files changed, 928 insertions(+), 451 deletions(-)
+
+commit 81fb57367afd164318f76fccb26780725a7d9dfb
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Wed Jul 30 07:10:36 2025 +0900
+
+    change:Dockerfile
+
+ LightZero/requirements.txt | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+commit 232c86ddb544d555f0682e19ddf11a0cde651ee6
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Wed Jul 30 07:02:57 2025 +0900
+
+    add:test2048
+
+ LightZero/test2048.py | 61 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 61 insertions(+)

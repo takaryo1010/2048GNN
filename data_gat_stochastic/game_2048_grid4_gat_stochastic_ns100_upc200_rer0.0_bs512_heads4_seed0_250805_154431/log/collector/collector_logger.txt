@@ -1,0 +1,15 @@
+[2025-08-05 15:48:04][muzero_collector.py:832][INFO] collect end:
+episode_count: 16
+envstep_count: 1198
+avg_envstep_per_episode: 74.875
+avg_envstep_per_sec: 7.2739704252253965
+avg_episode_per_sec: 0.09714818597963802
+collect_time: 164.69684779655643
+reward_mean: 540.5
+reward_std: 244.65434800959497
+reward_max: 1032.0
+reward_min: 156.0
+total_envstep_count: 1198
+total_episode_count: 16
+total_duration: 407.79821785332393
+visit_entropy: 1.92694333962772
