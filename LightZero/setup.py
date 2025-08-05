@@ -119,7 +119,15 @@ setup(
     python_requires=">=3.7",
     install_requires=requirements,
     tests_require=group_requirements['test'],
-    extras_require=group_requirements,
+    extras_require={
+        **group_requirements,
+        'gat': [
+            'torch-geometric>=2.3.0',
+            'torch-scatter>=2.1.0', 
+            'torch-sparse>=0.6.17',
+            'torch-cluster>=1.6.0'
+        ]
+    },
     ext_modules=cythonize(
         find_cython_extensions(),
         language_level=3,

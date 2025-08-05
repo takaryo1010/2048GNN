@@ -178,6 +178,19 @@ cd LightZero
 pip3 install -e .
 ```
 
+For Graph Attention Network (GAT) support (required for GAT-based MuZero models), install with GAT dependencies:
+
+```bash
+# Option 1: Install with GAT support using extras
+pip3 install -e .[gat]
+
+# Option 2: Install GAT dependencies separately
+pip3 install -r requirements-gat.txt
+
+# Test GAT dependencies
+python test_gat_dependencies.py
+```
+
 Kindly note that LightZero currently supports compilation only on `Linux` and `macOS` platforms.
 We are actively working towards extending this support to the `Windows` platform. 
 Your patience during this transition is greatly appreciated.
