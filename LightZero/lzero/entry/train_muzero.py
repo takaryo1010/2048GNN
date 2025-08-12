@@ -64,6 +64,7 @@ def train_muzero(
     elif create_cfg.policy.type == 'stochastic_muzero':
         from lzero.mcts import StochasticMuZeroGameBuffer as GameBuffer
 
+
     if cfg.policy.cuda and torch.cuda.is_available():
         cfg.policy.device = 'cuda'
     else:

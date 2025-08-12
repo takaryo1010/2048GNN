@@ -837,6 +837,14 @@ class MuZeroPolicy(Policy):
         elif self._cfg.model.model_type in ['mlp', 'mlp_context']:
             beg_index = self._cfg.model.observation_shape * step
             end_index = self._cfg.model.observation_shape * (step + self._cfg.model.frame_stack_num)
+        elif self._cfg.model.model_type in ['gat']:
+            # For GAT models, use image_channel similar to conv models
+            beg_index = self._cfg.model.image_channel * step
+            end_index = self._cfg.model.image_channel * (step + self._cfg.model.frame_stack_num)
+        else:
+            # Default fallback for other model types
+            beg_index = self._cfg.model.image_channel * step
+            end_index = self._cfg.model.image_channel * (step + self._cfg.model.frame_stack_num)
         return beg_index, end_index
 
     def _init_eval(self) -> None:
