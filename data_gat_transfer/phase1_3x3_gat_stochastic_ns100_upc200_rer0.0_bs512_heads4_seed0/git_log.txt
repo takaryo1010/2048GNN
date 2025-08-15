@@ -1,0 +1,209 @@
+ff2d6b8
+
+commit ff2d6b80d84947e98e6f122752b4e1639abd1dda
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Fri Aug 15 09:31:12 2025 +0000
+
+    add:args
+
+ .../phase2_4x4_minimal/ckpt/ckpt_best.pth.tar      | Bin 0 -> 646890 bytes
+ .../phase2_4x4_minimal/ckpt/iteration_0.pth.tar    | Bin 0 -> 1299498 bytes
+ .../phase2_4x4_minimal/ckpt/iteration_40.pth.tar   | Bin 0 -> 1299922 bytes
+ .../phase2_4x4_minimal/formatted_total_config.py   | 252 ++++++++++++++++++
+ .../phase2_4x4_minimal/git_diff.txt                | 290 +++++++++++++++++++++
+ .../phase2_4x4_minimal/git_log.txt                 | 187 +++++++++++++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |  23 ++
+ .../log/learner/learner_logger.txt                 | 129 +++++++++
+ .../events.out.tfevents.1755249922.e78357629a8c    | Bin 0 -> 8846 bytes
+ .../phase2_4x4_minimal/total_config.py             | 251 ++++++++++++++++++
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 7247978 bytes
+ .../formatted_total_config.py                      | 252 ++++++++++++++++++
+ .../git_diff.txt                                   | 290 +++++++++++++++++++++
+ .../git_log.txt                                    | 187 +++++++++++++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |  23 ++
+ .../log/learner/learner_logger.txt                 | 106 ++++++++
+ .../events.out.tfevents.1755250161.e78357629a8c    | Bin 0 -> 1828 bytes
+ .../total_config.py                                | 251 ++++++++++++++++++
+ minimal_transfer_test.py                           | 207 ++++++++++++---
+ transfer_files_update.py                           | 113 ++++++++
+ ultra_quick_transfer_test.py                       |   1 +
+ 23 files changed, 2519 insertions(+), 43 deletions(-)
+
+commit 516aa72ab00fa06bb680906247bfa1171c7cd1d2
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Fri Aug 15 09:19:14 2025 +0000
+
+    success?:transfer
+
+ LightZero/lzero/mcts/utils.py                      |  16 +-
+ .../lzero/model/gat_stochastic_muzero_model.py     | 173 +++++-
+ .../game_2048/config/gat_stochastic_2048_config.py |   2 +-
+ __pycache__/gat_transfer_helper.cpython-38.pyc     | Bin 0 -> 3611 bytes
+ .../minimal_logs/minimal_test.log                  | 230 ++++++++
+ data_gat_simple_test/simple_logs/simple_test.log   | 157 ++++++
+ data_gat_test/test_logs/gat_transfer_test.log      |  26 +
+ .../phase1_3x3_minimal/ckpt/ckpt_best.pth.tar      | Bin 0 -> 527594 bytes
+ .../phase1_3x3_minimal/ckpt/iteration_0.pth.tar    | Bin 0 -> 1060906 bytes
+ .../phase1_3x3_minimal/ckpt/iteration_65.pth.tar   | Bin 0 -> 1061330 bytes
+ .../phase1_3x3_minimal/formatted_total_config.py   | 252 +++++++++
+ .../phase1_3x3_minimal/git_diff.txt                | 184 +++++++
+ .../phase1_3x3_minimal/git_log.txt                 |  76 +++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 | 129 +++++
+ .../events.out.tfevents.1755244913.e78357629a8c    | Bin 0 -> 11946 bytes
+ .../phase1_3x3_minimal/total_config.py             | 251 +++++++++
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 527594 bytes
+ .../ckpt/iteration_0.pth.tar                       | Bin 0 -> 1060906 bytes
+ .../ckpt/iteration_60.pth.tar                      | Bin 0 -> 1061330 bytes
+ .../formatted_total_config.py                      | 252 +++++++++
+ .../phase1_3x3_minimal_250815_080450/git_diff.txt  | 184 +++++++
+ .../phase1_3x3_minimal_250815_080450/git_log.txt   |  76 +++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 | 129 +++++
+ .../events.out.tfevents.1755245092.e78357629a8c    | Bin 0 -> 11326 bytes
+ .../total_config.py                                | 251 +++++++++
+ .../phase1_3x3_quick_test/ckpt/ckpt_best.pth.tar   | Bin 0 -> 6776554 bytes
+ .../phase1_3x3_quick_test/ckpt/iteration_0.pth.tar | Bin 0 -> 13560250 bytes
+ .../formatted_total_config.py                      | 252 +++++++++
+ .../phase1_3x3_quick_test/git_diff.txt             | 184 +++++++
+ .../phase1_3x3_quick_test/git_log.txt              |  76 +++
+ .../log/collector/collector_logger.txt             | 120 +++++
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 | 359 +++++++++++++
+ .../events.out.tfevents.1755240529.e78357629a8c    | Bin 0 -> 51991 bytes
+ .../phase1_3x3_quick_test/total_config.py          | 251 +++++++++
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 6776554 bytes
+ .../ckpt/iteration_0.pth.tar                       | Bin 0 -> 13560250 bytes
+ .../formatted_total_config.py                      | 252 +++++++++
+ .../git_diff.txt                                   | 184 +++++++
+ .../git_log.txt                                    |  76 +++
+ .../log/collector/collector_logger.txt             | 240 +++++++++
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 | 583 +++++++++++++++++++++
+ .../events.out.tfevents.1755242050.e78357629a8c    | Bin 0 -> 99508 bytes
+ .../total_config.py                                | 251 +++++++++
+ .../formatted_total_config.py                      | 252 +++++++++
+ .../git_diff.txt                                   | 184 +++++++
+ .../git_log.txt                                    |  76 +++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |   0
+ .../log/learner/learner_logger.txt                 | 105 ++++
+ .../events.out.tfevents.1755245266.e78357629a8c    | Bin 0 -> 40 bytes
+ .../total_config.py                                | 251 +++++++++
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 6776554 bytes
+ .../ckpt/iteration_0.pth.tar                       | Bin 0 -> 13560250 bytes
+ .../formatted_total_config.py                      | 252 +++++++++
+ .../git_diff.txt                                   | 215 ++++++++
+ .../git_log.txt                                    |  76 +++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 | 135 +++++
+ .../events.out.tfevents.1755245326.e78357629a8c    | Bin 0 -> 4525 bytes
+ .../total_config.py                                | 251 +++++++++
+ .../formatted_total_config.py                      | 252 +++++++++
+ .../git_diff.txt                                   | 228 ++++++++
+ .../git_log.txt                                    |  76 +++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |   0
+ .../log/learner/learner_logger.txt                 | 105 ++++
+ .../events.out.tfevents.1755245450.e78357629a8c    | Bin 0 -> 40 bytes
+ .../total_config.py                                | 251 +++++++++
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 6776554 bytes
+ .../ckpt/iteration_0.pth.tar                       | Bin 0 -> 13560250 bytes
+ .../ckpt/iteration_1400.pth.tar                    | Bin 0 -> 13561946 bytes
+ .../formatted_total_config.py                      | 252 +++++++++
+ .../git_diff.txt                                   | 244 +++++++++
+ .../git_log.txt                                    |  76 +++
+ .../log/collector/collector_logger.txt             | 195 +++++++
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 | 500 ++++++++++++++++++
+ .../events.out.tfevents.1755245469.e78357629a8c    | Bin 0 -> 81296 bytes
+ .../total_config.py                                | 251 +++++++++
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 6776554 bytes
+ .../formatted_total_config.py                      | 252 +++++++++
+ .../git_diff.txt                                   | 266 ++++++++++
+ .../git_log.txt                                    |  76 +++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 | 106 ++++
+ .../events.out.tfevents.1755247972.e78357629a8c    | Bin 0 -> 1828 bytes
+ .../total_config.py                                | 251 +++++++++
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 6776554 bytes
+ .../ckpt/iteration_0.pth.tar                       | Bin 0 -> 13560250 bytes
+ .../ckpt/iteration_400.pth.tar                     | Bin 0 -> 13561402 bytes
+ .../formatted_total_config.py                      | 252 +++++++++
+ .../git_diff.txt                                   | 266 ++++++++++
+ .../git_log.txt                                    |  76 +++
+ .../log/collector/collector_logger.txt             |  45 ++
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 | 220 ++++++++
+ .../events.out.tfevents.1755248059.e78357629a8c    | Bin 0 -> 22686 bytes
+ .../total_config.py                                | 251 +++++++++
+ .../formatted_total_config.py                      | 252 +++++++++
+ .../phase2_4x4_transfer_test/git_diff.txt          | 266 ++++++++++
+ .../phase2_4x4_transfer_test/git_log.txt           |  76 +++
+ .../phase2_4x4_transfer_test/total_config.py       | 252 +++++++++
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 7247978 bytes
+ .../formatted_total_config.py                      | 252 +++++++++
+ .../git_diff.txt                                   | 266 ++++++++++
+ .../git_log.txt                                    |  76 +++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |  23 +
+ .../log/learner/learner_logger.txt                 | 106 ++++
+ .../events.out.tfevents.1755249342.e78357629a8c    | Bin 0 -> 1828 bytes
+ .../total_config.py                                | 251 +++++++++
+ gat_transfer_3x3_to_4x4_config.py                  | 284 ++++++++++
+ gat_transfer_helper.py                             | 126 +++++
+ minimal_transfer_test.py                           | 267 ++++++++++
+ quick_transfer_test.py                             | 384 ++++++++++++++
+ run_transfer_learning.py                           | 377 +++++++++++++
+ transfer_learning_helper.py                        | 219 ++++++++
+ ultra_quick_transfer_test.py                       | 289 ++++++++++
+ 126 files changed, 15440 insertions(+), 14 deletions(-)
+
+commit 8cb8bf2359b57a04d38983a8d194111a6fec17b7
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Fri Aug 15 06:18:40 2025 +0000
+
+    Dockerfile
+
+ LightZero/Dockerfile | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+commit 42ddf091f461ef48fe242e8348f3e6e582119195
+Merge: 44c9b1b 87efd60
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Tue Aug 12 15:42:05 2025 +0900
+
+    Merge branch 'main' of https://github.com/takaryo1010/2048GNN into main
+
+commit 44c9b1b53fbe0c3d2ba2d5610ed4c071af8ce757
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Tue Aug 12 15:41:22 2025 +0900
+
+    change:boardsize
+
+ .gitignore                                         |   3 +-
+ LightZero/lzero/entry/train_muzero.py              |   1 +
+ .../lzero/model/gat_stochastic_muzero_model.py     | 259 ++++++++++++++++++---
+ LightZero/lzero/policy/__init__.py                 |   3 +
+ LightZero/lzero/policy/muzero.py                   |   8 +
+ .../zoo/game_2048/config/gat_2048_3x3_config.py    | 122 ----------
+ .../game_2048/config/gat_2048_transfer_config.py   |   0
+ .../game_2048/config/gat_muzero_2048_3x3_config.py | 119 ----------
+ .../config/gat_stochastic_2048_3x3_config.py       |   0
+ .../gat_stochastic_2048_4x4_transfer_config.py     |   0
+ .../game_2048/config/gat_stochastic_2048_config.py | 163 ++++++++++++-
+ debug_gat_imports.py                               |  67 ++++++
+ test_gat_config.py                                 |  52 +++++
+ test_gat_imports_simple.py                         |  78 +++++++
+ test_gat_runtime.py                                | 136 +++++++++++
+ test_gat_training_config.py                        | 134 +++++++++++
+ test_gat_usage.py                                  | 131 +++++++++++
+ test_policy_registry.py                            |  65 ++++++
+ test_standard_policy_gat.py                        | 147 ++++++++++++
+ 19 files changed, 1198 insertions(+), 290 deletions(-)
