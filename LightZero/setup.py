@@ -82,10 +82,18 @@ def find_cython_extensions(path=None):
         relpath = os.path.relpath(os.path.abspath(item), start=here)
         rpath, _ = os.path.splitext(relpath)
         extname = '.'.join(rpath.split(os.path.sep))
+        
+        # Add common_lib to include directories for ctree extensions
+        current_include_dirs = include_dirs.copy()
+        if 'ctree' in item:
+            common_lib_path = os.path.join(here, 'lzero', 'mcts', 'ctree', 'common_lib')
+            if os.path.exists(common_lib_path):
+                current_include_dirs.append(common_lib_path)
+        
         extensions.append(Extension(
             extname, [item],
             # include_dirs=[np.get_include()],
-            include_dirs=include_dirs,
+            include_dirs=current_include_dirs,
             language="c++",
             extra_compile_args=extra_compile_args,
             extra_link_args=extra_link_args,

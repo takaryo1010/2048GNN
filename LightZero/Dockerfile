@@ -46,9 +46,17 @@ RUN ln -s /usr/bin/python3.8 /usr/local/bin/python && \
 RUN python -m pip install --upgrade pip setuptools wheel && \
     python -m pip install cython numpy
 
+# Install PyTorch first (required for torch-scatter and other PyTorch dependencies)
+# Using CPU-only version to reduce image size and avoid CUDA dependencies
+RUN python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
 # Clone the LightZero repository from GitHub
 # This step downloads the latest version of LightZero to our Docker image.
 RUN git clone https://github.com/takaryo1010/2048GNN.git
+
+# Set environment variables for Python path and build
+ENV PYTHONPATH="/opendilab/2048GNN/LightZero:$PYTHONPATH"
+ENV CPATH="/opendilab/2048GNN/LightZero/lzero/mcts/ctree/common_lib:$CPATH"
 
 # Install the LightZero package in editable mode
 # The -e option allows us to edit the source code without needing to reinstall the package.
