@@ -28,9 +28,10 @@ WORKDIR /opendilab
 
 # Install Python 3.8 and other dependencies
 # We update the apt package list, install Python 3.8, pip, compilers and other necessary tools.
+# Added Cython build dependencies for LightZero compilation
 # After installing, we clean up the apt cache and remove unnecessary lists to save space.
 RUN apt-get update && \
-    apt-get install -y python3.8 python3-pip gcc g++ swig git && \
+    apt-get install -y python3.8 python3.8-dev python3-pip gcc g++ swig git build-essential && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -41,12 +42,14 @@ RUN ln -s /usr/bin/python3.8 /usr/local/bin/python && \
 
 # Update pip and setuptools to the latest version
 # This step ensures that we have the latest tools for installing Python packages.
-RUN python -m pip install --upgrade pip setuptools
+# Install essential Python packages including Cython for LightZero compilation
+RUN python -m pip install --upgrade pip setuptools wheel && \
+    python -m pip install cython numpy
 
 # Clone the LightZero repository from GitHub
 # This step downloads the latest version of LightZero to our Docker image.
-RUN git clone https://github.com/opendilab/LightZero.git
+RUN git clone https://github.com/takaryo1010/2048GNN.git
 
 # Install the LightZero package in editable mode
 # The -e option allows us to edit the source code without needing to reinstall the package.
-RUN pip install -e ./LightZero
+RUN pip install -e ./2048GNN/LightZero
