@@ -1,0 +1,106 @@
+[2025-08-15 09:15:42][base_learner.py:360][INFO] [RANK0]: DI-engine DRL Policy
+GATStochasticMuZeroModel(
+  (representation_network): GATRepresentationNetwork(
+    (input_proj): Linear(in_features=16, out_features=64, bias=True)
+    (gat_layers): ModuleList(
+      (0): GATConv(64, 64, heads=4)
+      (1-2): 2 x GATConv(256, 64, heads=4)
+    )
+    (output_proj): Sequential(
+      (0): Linear(in_features=64, out_features=128, bias=True)
+      (1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      (2): ReLU()
+      (3): Linear(in_features=128, out_features=256, bias=True)
+      (4): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+      (5): ReLU()
+    )
+    (activation): ReLU()
+    (dropout): Dropout(p=0.1, inplace=False)
+  )
+  (afterstate_dynamics_network): GATAfterstateDynamicsNetwork(
+    (action_embedding): Embedding(4, 64)
+    (state_action_fusion): Sequential(
+      (0): Linear(in_features=320, out_features=128, bias=True)
+      (1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      (2): ReLU()
+      (3): Linear(in_features=128, out_features=128, bias=True)
+      (4): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      (5): ReLU()
+      (6): Linear(in_features=128, out_features=256, bias=True)
+      (7): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+      (8): ReLU()
+    )
+    (to_grid_proj): Linear(in_features=256, out_features=256, bias=True)
+    (gat_afterstate): GATRepresentationNetwork(
+      (input_proj): Linear(in_features=16, out_features=64, bias=True)
+      (gat_layers): ModuleList(
+        (0): GATConv(64, 64, heads=4)
+        (1): GATConv(256, 64, heads=4)
+      )
+      (output_proj): Sequential(
+        (0): Linear(in_features=64, out_features=128, bias=True)
+        (1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        (2): ReLU()
+        (3): Linear(in_features=128, out_features=256, bias=True)
+        (4): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (5): ReLU()
+      )
+      (activation): ReLU()
+      (dropout): Dropout(p=0.1, inplace=False)
+    )
+  )
+  (chance_encoder): GATChanceEncoder(
+    (chance_embedding): Embedding(32, 64)
+    (gat_chance): GATRepresentationNetwork(
+      (input_proj): Linear(in_features=32, out_features=64, bias=True)
+      (gat_layers): ModuleList(
+        (0): GATConv(64, 64, heads=4)
+        (1): GATConv(256, 64, heads=4)
+      )
+      (output_proj): Sequential(
+        (0): Linear(in_features=64, out_features=128, bias=True)
+        (1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        (2): ReLU()
+        (3): Linear(in_features=128, out_features=256, bias=True)
+        (4): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (5): ReLU()
+      )
+      (activation): ReLU()
+      (dropout): Dropout(p=0.1, inplace=False)
+    )
+    (chance_fusion): Sequential(
+      (0): Linear(in_features=320, out_features=256, bias=True)
+      (1): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+      (2): ReLU()
+      (3): Linear(in_features=256, out_features=256, bias=True)
+      (4): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+      (5): ReLU()
+    )
+  )
+  (state_to_grid_projection): Linear(in_features=256, out_features=256, bias=True)
+  (reward_head_afterstate): Sequential(
+    (0): Linear(in_features=256, out_features=32, bias=True)
+    (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+    (2): ReLU()
+    (3): Linear(in_features=32, out_features=601, bias=True)
+  )
+  (value_head): Sequential(
+    (0): Linear(in_features=256, out_features=32, bias=True)
+    (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+    (2): ReLU()
+    (3): Linear(in_features=32, out_features=601, bias=True)
+  )
+  (policy_head): Sequential(
+    (0): Linear(in_features=256, out_features=32, bias=True)
+    (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+    (2): ReLU()
+    (3): Linear(in_features=32, out_features=4, bias=True)
+  )
+  (afterstate_policy_head): Sequential(
+    (0): Linear(in_features=256, out_features=32, bias=True)
+    (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+    (2): ReLU()
+    (3): Linear(in_features=32, out_features=32, bias=True)
+  )
+)
+[2025-08-15 09:16:05][base_learner.py:360][INFO] [RANK0]: learner save ckpt in ./data_quick_transfer/phase2_4x4_transfer_test_250815_091541/ckpt/ckpt_best.pth.tar

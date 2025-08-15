@@ -1,0 +1,76 @@
+8cb8bf2
+
+commit 8cb8bf2359b57a04d38983a8d194111a6fec17b7
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Fri Aug 15 06:18:40 2025 +0000
+
+    Dockerfile
+
+ LightZero/Dockerfile | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+commit 42ddf091f461ef48fe242e8348f3e6e582119195
+Merge: 44c9b1b 87efd60
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Tue Aug 12 15:42:05 2025 +0900
+
+    Merge branch 'main' of https://github.com/takaryo1010/2048GNN into main
+
+commit 44c9b1b53fbe0c3d2ba2d5610ed4c071af8ce757
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Tue Aug 12 15:41:22 2025 +0900
+
+    change:boardsize
+
+ .gitignore                                         |   3 +-
+ LightZero/lzero/entry/train_muzero.py              |   1 +
+ .../lzero/model/gat_stochastic_muzero_model.py     | 259 ++++++++++++++++++---
+ LightZero/lzero/policy/__init__.py                 |   3 +
+ LightZero/lzero/policy/muzero.py                   |   8 +
+ .../zoo/game_2048/config/gat_2048_3x3_config.py    | 122 ----------
+ .../game_2048/config/gat_2048_transfer_config.py   |   0
+ .../game_2048/config/gat_muzero_2048_3x3_config.py | 119 ----------
+ .../config/gat_stochastic_2048_3x3_config.py       |   0
+ .../gat_stochastic_2048_4x4_transfer_config.py     |   0
+ .../game_2048/config/gat_stochastic_2048_config.py | 163 ++++++++++++-
+ debug_gat_imports.py                               |  67 ++++++
+ test_gat_config.py                                 |  52 +++++
+ test_gat_imports_simple.py                         |  78 +++++++
+ test_gat_runtime.py                                | 136 +++++++++++
+ test_gat_training_config.py                        | 134 +++++++++++
+ test_gat_usage.py                                  | 131 +++++++++++
+ test_policy_registry.py                            |  65 ++++++
+ test_standard_policy_gat.py                        | 147 ++++++++++++
+ 19 files changed, 1198 insertions(+), 290 deletions(-)
+
+commit 87efd6010564422646f7d7f815ad65d6d0032dad
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Tue Aug 5 23:35:21 2025 +0900
+
+    fix:req.txt
+
+ LightZero/requirements.txt | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+commit 539197a73d557e42395da2d8425693ffab162e1a
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Tue Aug 5 22:26:29 2025 +0900
+
+    change : setup.py
+
+ LightZero/GAT_INSTALLATION.md                      | 106 +++++++++
+ LightZero/README.md                                |  13 ++
+ LightZero/requirements-gat.txt                     |   5 +
+ LightZero/requirements.txt                         |   6 +-
+ LightZero/setup.py                                 |  10 +-
+ LightZero/setup_gat_environment.sh                 |  85 +++++++
+ .../formatted_total_config.py                      | 249 +++++++++++++++++++++
+ .../git_diff.txt                                   |   0
+ .../git_log.txt                                    | 230 +++++++++++++++++++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |   0
+ .../log/learner/learner_logger.txt                 | 168 ++++++++++++++
+ .../events.out.tfevents.1754398540.7de97ae767c2    | Bin 0 -> 40 bytes
+ .../total_config.py                                | 249 +++++++++++++++++++++
+ debug_imports.py                                   |   0
+ 15 files changed, 1119 insertions(+), 2 deletions(-)

@@ -1,0 +1,129 @@
+[2025-08-15 08:01:53][base_learner.py:360][INFO] [RANK0]: DI-engine DRL Policy
+GATStochasticMuZeroModel(
+  (representation_network): GATRepresentationNetwork(
+    (input_proj): Linear(in_features=16, out_features=16, bias=True)
+    (gat_layers): ModuleList(
+      (0): GATConv(16, 16, heads=1)
+    )
+    (output_proj): Sequential(
+      (0): Linear(in_features=16, out_features=32, bias=True)
+      (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+      (2): ReLU()
+      (3): Linear(in_features=32, out_features=64, bias=True)
+      (4): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
+      (5): ReLU()
+    )
+    (activation): ReLU()
+    (dropout): Dropout(p=0.0, inplace=False)
+  )
+  (afterstate_dynamics_network): GATAfterstateDynamicsNetwork(
+    (action_embedding): Embedding(4, 16)
+    (state_action_fusion): Sequential(
+      (0): Linear(in_features=80, out_features=32, bias=True)
+      (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+      (2): ReLU()
+      (3): Linear(in_features=32, out_features=32, bias=True)
+      (4): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+      (5): ReLU()
+      (6): Linear(in_features=32, out_features=64, bias=True)
+      (7): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
+      (8): ReLU()
+    )
+    (to_grid_proj): Linear(in_features=64, out_features=144, bias=True)
+    (gat_afterstate): GATRepresentationNetwork(
+      (input_proj): Linear(in_features=16, out_features=16, bias=True)
+      (gat_layers): ModuleList()
+      (output_proj): Sequential(
+        (0): Linear(in_features=16, out_features=32, bias=True)
+        (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+        (2): ReLU()
+        (3): Linear(in_features=32, out_features=64, bias=True)
+        (4): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
+        (5): ReLU()
+      )
+      (activation): ReLU()
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+  )
+  (chance_encoder): GATChanceEncoder(
+    (chance_embedding): Embedding(18, 16)
+    (gat_chance): GATRepresentationNetwork(
+      (input_proj): Linear(in_features=32, out_features=16, bias=True)
+      (gat_layers): ModuleList()
+      (output_proj): Sequential(
+        (0): Linear(in_features=16, out_features=32, bias=True)
+        (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+        (2): ReLU()
+        (3): Linear(in_features=32, out_features=64, bias=True)
+        (4): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
+        (5): ReLU()
+      )
+      (activation): ReLU()
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+    (chance_fusion): Sequential(
+      (0): Linear(in_features=80, out_features=64, bias=True)
+      (1): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
+      (2): ReLU()
+      (3): Linear(in_features=64, out_features=64, bias=True)
+      (4): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
+      (5): ReLU()
+    )
+  )
+  (state_to_grid_projection): Linear(in_features=64, out_features=144, bias=True)
+  (reward_head_afterstate): Sequential(
+    (0): Linear(in_features=64, out_features=8, bias=True)
+    (1): LayerNorm((8,), eps=1e-05, elementwise_affine=True)
+    (2): ReLU()
+    (3): Linear(in_features=8, out_features=601, bias=True)
+  )
+  (value_head): Sequential(
+    (0): Linear(in_features=64, out_features=8, bias=True)
+    (1): LayerNorm((8,), eps=1e-05, elementwise_affine=True)
+    (2): ReLU()
+    (3): Linear(in_features=8, out_features=601, bias=True)
+  )
+  (policy_head): Sequential(
+    (0): Linear(in_features=64, out_features=8, bias=True)
+    (1): LayerNorm((8,), eps=1e-05, elementwise_affine=True)
+    (2): ReLU()
+    (3): Linear(in_features=8, out_features=4, bias=True)
+  )
+  (afterstate_policy_head): Sequential(
+    (0): Linear(in_features=64, out_features=8, bias=True)
+    (1): LayerNorm((8,), eps=1e-05, elementwise_affine=True)
+    (2): ReLU()
+    (3): Linear(in_features=8, out_features=18, bias=True)
+  )
+)
+[2025-08-15 08:01:56][base_learner.py:360][INFO] [RANK0]: learner save ckpt in ./data_minimal_transfer/phase1_3x3_minimal/ckpt/ckpt_best.pth.tar
+[2025-08-15 08:01:58][base_learner.py:360][INFO] [RANK0]: === Training Iteration 0 Result ===
+[2025-08-15 08:01:58][learner_hook.py:228][INFO] 
++-------+------------------------------+------------+-------------------------+----------------+
+| Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |
++-------+------------------------------+------------+-------------------------+----------------+
+| Value | 1.000000                     | 0.010000   | 71.992302               | 71.992302      |
++-------+------------------------------+------------+-------------------------+----------------+
++-------+-----------------+-----------------+----------------+----------------------+
+| Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |
++-------+-----------------+-----------------+----------------+----------------------+
+| Value | 7.451332        | 31.992973       | 38.391567      | 0.000000             |
++-------+-----------------+-----------------+----------------+----------------------+
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Value | 14.451859                  | 31.992973                 | 0.500000            | 23.990999          |
++-------+----------------------------+---------------------------+---------------------+--------------------+
++-------+-------------------+------------------+-----------------------+----------------------+
+| Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |
++-------+-------------------+------------------+-----------------------+----------------------+
+| Value | 6.916667          | 15.570417        | 0.000006              | 0.000006             |
++-------+-------------------+------------------+-----------------------+----------------------+
++-------+-------------------------------+------------------------------+---------------------------------+
+| Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |
++-------+-------------------------------+------------------------------+---------------------------------+
+| Value | 1.362406                      | 2.600310                     | 1.337476                        |
++-------+-------------------------------+------------------------------+---------------------------------+
+
+[2025-08-15 08:01:58][base_learner.py:360][INFO] [RANK0]: learner save ckpt in ./data_minimal_transfer/phase1_3x3_minimal/ckpt/iteration_0.pth.tar
+[2025-08-15 08:02:32][base_learner.py:360][INFO] [RANK0]: learner save ckpt in ./data_minimal_transfer/phase1_3x3_minimal/ckpt/iteration_65.pth.tar

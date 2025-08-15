@@ -1,0 +1,157 @@
+2025-08-15 06:33:37,153 - WARNING - If you want to use numba to speed up segment tree, please install numba first
+2025-08-15 06:33:37,258 - WARNING - Please install pyecharts first, you can install it by running 'pip install pyecharts'
+2025-08-15 06:33:37,580 - WARNING - not found transformer, please install it using: pip install transformers
+2025-08-15 06:33:39,748 - INFO - Generating grammar tables from /usr/lib/python3.8/lib2to3/Grammar.txt
+2025-08-15 06:33:39,766 - INFO - Generating grammar tables from /usr/lib/python3.8/lib2to3/PatternGrammar.txt
+2025-08-15 06:33:40,647 - INFO - [RANK0]: DI-engine DRL Policy
+GATStochasticMuZeroModel(
+  (representation_network): GATRepresentationNetwork(
+    (input_proj): Linear(in_features=16, out_features=16, bias=True)
+    (gat_layers): ModuleList(
+      (0): GATConv(16, 16, heads=1)
+    )
+    (output_proj): Sequential(
+      (0): Linear(in_features=16, out_features=32, bias=True)
+      (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+      (2): ReLU()
+      (3): Linear(in_features=32, out_features=64, bias=True)
+      (4): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
+      (5): ReLU()
+    )
+    (activation): ReLU()
+    (dropout): Dropout(p=0.0, inplace=False)
+  )
+  (afterstate_dynamics_network): GATAfterstateDynamicsNetwork(
+    (action_embedding): Embedding(4, 16)
+    (state_action_fusion): Sequential(
+      (0): Linear(in_features=80, out_features=32, bias=True)
+      (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+      (2): ReLU()
+      (3): Linear(in_features=32, out_features=32, bias=True)
+      (4): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+      (5): ReLU()
+      (6): Linear(in_features=32, out_features=64, bias=True)
+      (7): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
+      (8): ReLU()
+    )
+    (to_grid_proj): Linear(in_features=64, out_features=144, bias=True)
+    (gat_afterstate): GATRepresentationNetwork(
+      (input_proj): Linear(in_features=16, out_features=16, bias=True)
+      (gat_layers): ModuleList()
+      (output_proj): Sequential(
+        (0): Linear(in_features=16, out_features=32, bias=True)
+        (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+        (2): ReLU()
+        (3): Linear(in_features=32, out_features=64, bias=True)
+        (4): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
+        (5): ReLU()
+      )
+      (activation): ReLU()
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+  )
+  (chance_encoder): GATChanceEncoder(
+    (chance_embedding): Embedding(18, 16)
+    (gat_chance): GATRepresentationNetwork(
+      (input_proj): Linear(in_features=32, out_features=16, bias=True)
+      (gat_layers): ModuleList()
+      (output_proj): Sequential(
+        (0): Linear(in_features=16, out_features=32, bias=True)
+        (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+        (2): ReLU()
+        (3): Linear(in_features=32, out_features=64, bias=True)
+        (4): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
+        (5): ReLU()
+      )
+      (activation): ReLU()
+      (dropout): Dropout(p=0.0, inplace=False)
+    )
+    (chance_fusion): Sequential(
+      (0): Linear(in_features=80, out_features=64, bias=True)
+      (1): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
+      (2): ReLU()
+      (3): Linear(in_features=64, out_features=64, bias=True)
+      (4): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
+      (5): ReLU()
+    )
+  )
+  (state_to_grid_projection): Linear(in_features=64, out_features=144, bias=True)
+  (reward_head_afterstate): Sequential(
+    (0): Linear(in_features=64, out_features=32, bias=True)
+    (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+    (2): ReLU()
+    (3): Linear(in_features=32, out_features=601, bias=True)
+  )
+  (value_head): Sequential(
+    (0): Linear(in_features=64, out_features=32, bias=True)
+    (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+    (2): ReLU()
+    (3): Linear(in_features=32, out_features=601, bias=True)
+  )
+  (policy_head): Sequential(
+    (0): Linear(in_features=64, out_features=32, bias=True)
+    (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+    (2): ReLU()
+    (3): Linear(in_features=32, out_features=4, bias=True)
+  )
+  (afterstate_policy_head): Sequential(
+    (0): Linear(in_features=64, out_features=32, bias=True)
+    (1): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+    (2): ReLU()
+    (3): Linear(in_features=32, out_features=18, bias=True)
+  )
+)
+2025-08-15 06:33:43,502 - INFO - [EVALUATOR]env 0 finish episode, final reward: 1100.0, current episode: 1
+2025-08-15 06:33:43,506 - INFO - 
++-------+------------+---------------------+---------------+---------------+
+| Name  | train_iter | ckpt_name           | episode_count | envstep_count |
++-------+------------+---------------------+---------------+---------------+
+| Value | 0.000000   | iteration_0.pth.tar | 1.000000      | 119.000000    |
++-------+------------+---------------------+---------------+---------------+
++-------+-------------------------+---------------+---------------------+----------------------+
+| Name  | avg_envstep_per_episode | evaluate_time | avg_envstep_per_sec | avg_time_per_episode |
++-------+-------------------------+---------------+---------------------+----------------------+
+| Value | 119.000000              | 3.077627      | 38.666149           | 0.324926             |
++-------+-------------------------+---------------+---------------------+----------------------+
++-------+-------------+------------+-------------+-------------+
+| Name  | reward_mean | reward_std | reward_max  | reward_min  |
++-------+-------------+------------+-------------+-------------+
+| Value | 1100.000000 | 0.000000   | 1100.000000 | 1100.000000 |
++-------+-------------+------------+-------------+-------------+
++-------+---------------------+--------------------------+
+| Name  | eval_episode_return | eval_episode_return_mean |
++-------+---------------------+--------------------------+
+| Value | [1100.0]            | 1100.000000              |
++-------+---------------------+--------------------------+
+
+2025-08-15 06:33:43,529 - INFO - [RANK0]: learner save ckpt in ./gat_simple_3x3_test/ckpt/ckpt_best.pth.tar
+2025-08-15 06:33:49,429 - INFO - [RANK0]: === Training Iteration 0 Result ===
+2025-08-15 06:33:49,431 - INFO - 
++-------+------------------------------+------------+-------------------------+----------------+
+| Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |
++-------+------------------------------+------------+-------------------------+----------------+
+| Value | 1.000000                     | 0.010000   | 40.374992               | 72.500092      |
++-------+------------------------------+------------+-------------------------+----------------+
++-------+-----------------+-----------------+----------------+----------------------+
+| Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |
++-------+-----------------+-----------------+----------------+----------------------+
+| Value | 7.927871        | 31.992973       | 38.391567      | 0.000000             |
++-------+-----------------+-----------------+----------------+----------------------+
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Value | 14.451859                  | 31.992973                 | 0.531250            | 47.118744          |
++-------+----------------------------+---------------------------+---------------------+--------------------+
++-------+-------------------+------------------+-----------------------+----------------------+
+| Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |
++-------+-------------------+------------------+-----------------------+----------------------+
+| Value | 9.000000          | 40.942112        | -0.000006             | -0.000006            |
++-------+-------------------+------------------+-----------------------+----------------------+
++-------+-------------------------------+------------------------------+---------------------------------+
+| Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |
++-------+-------------------------------+------------------------------+---------------------------------+
+| Value | 1.527745                      | 4.868815                     | 1.393697                        |
++-------+-------------------------------+------------------------------+---------------------------------+
+
+2025-08-15 06:33:49,480 - INFO - [RANK0]: learner save ckpt in ./gat_simple_3x3_test/ckpt/iteration_0.pth.tar
+2025-08-15 06:34:01,231 - INFO - [RANK0]: learner save ckpt in ./gat_simple_3x3_test/ckpt/iteration_40.pth.tar

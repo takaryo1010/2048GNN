@@ -26,7 +26,7 @@ num_of_possible_chance_tile = 2
 # GAT-specific configurations for StochasticMuZero
 # ==============================================
 # 【重要】以下の変数を変更するだけで全ての設定が自動調整されます
-grid_size = 4  # ゲームのグリッドサイズ (3=3x3, 4=4x4, 5=5x5, etc.)
+grid_size = 3  # ゲームのグリッドサイズ (3=3x3, 4=4x4, 5=5x5, etc.)
 # ==============================================
 chance_space_size = (grid_size ** 2) * num_of_possible_chance_tile  # Automatically calculated based on grid size
 num_heads = 4

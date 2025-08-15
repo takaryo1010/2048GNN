@@ -150,8 +150,8 @@ class GATRepresentationNetwork(nn.Module):
             self._forward_count = 0
         
         self._forward_count += 1
-        if self._forward_count % 100 == 0:  # 100回ごとに1回だけ
-            print(f"🚀 GAT Forward #{self._forward_count}: {x.shape}")
+        # if self._forward_count % 100 == 0:  # 100回ごとに1回だけ
+            # print(f"🚀 GAT Forward #{self._forward_count}: {x.shape}")
         
         # Ensure correct dtype
         if x.dtype != torch.float32:
@@ -257,7 +257,7 @@ class GATChanceEncoder(nn.Module):
         """
         # 簡潔なデバッグ（初回のみ）
         if not hasattr(self, '_chance_count'):
-            print(f"🎲 GATChanceEncoder 初回Forward: state{state.shape}, chance{chance.shape}")
+            # print(f"🎲 GATChanceEncoder 初回Forward: state{state.shape}, chance{chance.shape}")
             self._chance_count = 0
         
         self._chance_count += 1
@@ -289,8 +289,8 @@ class GATChanceEncoder(nn.Module):
         fused = torch.cat([state_repr, chance_embed], dim=-1)
         output = self.chance_fusion(fused)
         
-        if self._chance_count % 50 == 0:  # 50回ごとに1回だけ
-            print(f"🎲 ChanceEncoder #{self._chance_count}: {output.shape}")
+        # if self._chance_count % 50 == 0:  # 50回ごとに1回だけ
+        #     # print(f"🎲 ChanceEncoder #{self._chance_count}: {output.shape}")
         
         return output
 
@@ -705,3 +705,166 @@ class GATStochasticMuZeroModel(nn.Module):
     
     def get_reward_mean(self):
         return get_reward_mean(self)
+    
+    def load_state_dict_for_transfer(self, state_dict, source_grid_size: int, target_grid_size: int):
+        """
+        3×3から4×4への転移学習のためのカスタム状態辞書読み込み
+        
+        Args:
+            state_dict: 学習済みモデルの状態辞書
+            source_grid_size: ソースモデルのグリッドサイズ (e.g., 3)
+            target_grid_size: ターゲットモデルのグリッドサイズ (e.g., 4)
+        """
+        print(f"🔄 転移学習: {source_grid_size}×{source_grid_size} → {target_grid_size}×{target_grid_size}")
+        
+        # 現在のモデルの状態辞書を取得
+        current_state_dict = self.state_dict()
+        
+        # GAT関連のパラメータは直接転移可能（グラフベースなので）
+        transferable_keys = []
+        size_dependent_keys = []
+        
+        for key in state_dict.keys():
+            if any(gat_component in key for gat_component in [
+                'representation_network.gat_layers',
+                'representation_network.input_proj',
+                'representation_network.output_proj',
+                'afterstate_dynamics_network.gat_afterstate.gat_layers',
+                'afterstate_dynamics_network.gat_afterstate.input_proj',
+                'afterstate_dynamics_network.gat_afterstate.output_proj',
+                'chance_encoder.gat_chance.gat_layers',
+                'chance_encoder.gat_chance.input_proj',
+                'chance_encoder.gat_chance.output_proj',
+                'value_head',
+                'policy_head',
+                'reward_head_afterstate'
+            ]):
+                # グリッドサイズに依存しないパラメータ
+                transferable_keys.append(key)
+            elif any(size_component in key for size_component in [
+                'chance_encoder.chance_embedding',
+                'afterstate_policy_head',
+                'state_to_grid_projection'
+            ]):
+                # サイズに依存するパラメータ
+                size_dependent_keys.append(key)
+            else:
+                # その他のパラメータも転移
+                transferable_keys.append(key)
+        
+        print(f"✅ 転移可能なパラメータ: {len(transferable_keys)}個")
+        print(f"⚠️  サイズ依存パラメータ: {len(size_dependent_keys)}個")
+        
+        # 転移可能なパラメータを直接コピー
+        transferred_count = 0
+        for key in transferable_keys:
+            if key in current_state_dict and key in state_dict:
+                # サイズチェック
+                if current_state_dict[key].shape == state_dict[key].shape:
+                    current_state_dict[key] = state_dict[key]
+                    transferred_count += 1
+                else:
+                    print(f"⚠️  サイズ不一致でスキップ: {key}")
+                    print(f"    ソース: {state_dict[key].shape}, ターゲット: {current_state_dict[key].shape}")
+        
+        # サイズ依存パラメータの処理
+        adapted_count = 0
+        for key in size_dependent_keys:
+            if key in current_state_dict and key in state_dict:
+                adapted_count += self._adapt_size_dependent_parameter(
+                    key, state_dict[key], current_state_dict, 
+                    source_grid_size, target_grid_size
+                )
+        
+        # 更新された状態辞書を読み込み
+        self.load_state_dict(current_state_dict, strict=False)
+        
+        print(f"🎉 転移学習完了:")
+        print(f"  - 直接転移: {transferred_count}個のパラメータ")
+        print(f"  - 適応転移: {adapted_count}個のパラメータ")
+        
+    def _adapt_size_dependent_parameter(self, key: str, source_param: torch.Tensor, 
+                                       current_state_dict: dict, source_grid_size: int, 
+                                       target_grid_size: int) -> int:
+        """
+        サイズ依存パラメータの適応的転移
+        
+        Returns:
+            int: 成功した場合は1、失敗した場合は0
+        """
+        current_param = current_state_dict[key]
+        
+        try:
+            if 'chance_embedding' in key:
+                # チャンス埋め込みの適応
+                source_chance_size = source_grid_size ** 2 * 2  # 3×3なら18
+                target_chance_size = target_grid_size ** 2 * 2  # 4×4なら32
+                
+                if source_param.shape[0] == source_chance_size and current_param.shape[0] == target_chance_size:
+                    # 埋め込み次元は同じはずなので、新しいエントリは平均値で初期化
+                    embedding_dim = source_param.shape[1]
+                    new_embedding = torch.zeros(target_chance_size, embedding_dim)
+                    
+                    # 既存の部分をコピー
+                    copy_size = min(source_chance_size, target_chance_size)
+                    new_embedding[:copy_size] = source_param[:copy_size]
+                    
+                    # 新しい部分は既存パラメータの平均値で初期化
+                    if target_chance_size > source_chance_size:
+                        mean_param = source_param.mean(dim=0, keepdim=True)
+                        new_embedding[source_chance_size:] = mean_param.expand(
+                            target_chance_size - source_chance_size, -1
+                        )
+                    
+                    current_state_dict[key] = new_embedding
+                    print(f"✅ チャンス埋め込み適応: {source_chance_size} → {target_chance_size}")
+                    return 1
+                    
+            elif 'afterstate_policy_head' in key:
+                # アフター状態ポリシーヘッドの適応
+                # 最後の層のみサイズが異なる
+                if len(source_param.shape) == 2:  # Linear層の重み
+                    source_out_features = source_param.shape[0]
+                    target_out_features = current_param.shape[0]
+                    
+                    if source_out_features != target_out_features:
+                        # 新しい出力サイズに拡張
+                        new_param = torch.zeros_like(current_param)
+                        copy_size = min(source_out_features, target_out_features)
+                        new_param[:copy_size] = source_param[:copy_size]
+                        
+                        # 新しい部分は既存の平均値で初期化
+                        if target_out_features > source_out_features:
+                            mean_param = source_param.mean(dim=0, keepdim=True)
+                            new_param[source_out_features:] = mean_param.expand(
+                                target_out_features - source_out_features, -1
+                            )
+                        
+                        current_state_dict[key] = new_param
+                        print(f"✅ アフター状態ポリシーヘッド適応: {source_out_features} → {target_out_features}")
+                        return 1
+                        
+                elif len(source_param.shape) == 1:  # バイアス
+                    source_features = source_param.shape[0]
+                    target_features = current_param.shape[0]
+                    
+                    if source_features != target_features:
+                        new_param = torch.zeros_like(current_param)
+                        copy_size = min(source_features, target_features)
+                        new_param[:copy_size] = source_param[:copy_size]
+                        
+                        # 新しい部分は既存の平均値で初期化
+                        if target_features > source_features:
+                            mean_val = source_param.mean()
+                            new_param[source_features:] = mean_val
+                            
+                        current_state_dict[key] = new_param
+                        print(f"✅ アフター状態ポリシーバイアス適応: {source_features} → {target_features}")
+                        return 1
+                        
+            print(f"⚠️  適応できませんでした: {key}")
+            return 0
+            
+        except Exception as e:
+            print(f"❌ パラメータ適応エラー {key}: {e}")
+            return 0

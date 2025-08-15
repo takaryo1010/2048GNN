@@ -104,9 +104,9 @@ def prepare_observation(observation_list, model_type='conv'):
         try:
             observation_array = np.array(observation_list)
         except ValueError as e:
-            print(f"DEBUG GAT: Initial array creation failed: {e}")
-            print(f"DEBUG GAT: observation_list length: {len(observation_list)}")
-            print(f"DEBUG GAT: First few element shapes: {[np.array(obs).shape for obs in observation_list[:5]]}")
+            # print(f"DEBUG GAT: Initial array creation failed: {e}")
+            # print(f"DEBUG GAT: observation_list length: {len(observation_list)}")
+            # print(f"DEBUG GAT: First few element shapes: {[np.array(obs).shape for obs in observation_list[:5]]}")
             
             # Handle inconsistent shapes by processing each observation individually
             processed_obs = []
@@ -116,7 +116,7 @@ def prepare_observation(observation_list, model_type='conv'):
                         # Extract the single observation from nested list
                         processed_obs.append(obs[0])
                     else:
-                        print(f"DEBUG GAT: Found list with length {len(obs)} at index {i}")
+                        # print(f"DEBUG GAT: Found list with length {len(obs)} at index {i}")
                         # Take first element or handle differently
                         processed_obs.append(obs[0] if obs else np.zeros((16, 4, 4)))
                 else:
@@ -124,12 +124,12 @@ def prepare_observation(observation_list, model_type='conv'):
             
             try:
                 observation_array = np.array(processed_obs)
-                print(f"DEBUG GAT: Successfully created array with shape: {observation_array.shape}")
+                # print(f"DEBUG GAT: Successfully created array with shape: {observation_array.shape}")
             except ValueError as e2:
-                print(f"DEBUG GAT: Second attempt failed: {e2}")
+                # print(f"DEBUG GAT: Second attempt failed: {e2}")
                 # Final fallback: ensure all observations have the same shape
                 shapes = [np.array(obs).shape for obs in processed_obs]
-                print(f"DEBUG GAT: Processed observation shapes: {set(shapes)}")
+                # print(f"DEBUG GAT: Processed observation shapes: {set(shapes)}")
                 # Force all to be the same shape as the first valid one
                 target_shape = shapes[0] if shapes else (16, 4, 4)
                 final_obs = []
@@ -138,7 +138,7 @@ def prepare_observation(observation_list, model_type='conv'):
                     if obs_array.shape == target_shape:
                         final_obs.append(obs_array)
                     else:
-                        print(f"DEBUG GAT: Reshaping from {obs_array.shape} to {target_shape}")
+                        # print(f"DEBUG GAT: Reshaping from {obs_array.shape} to {target_shape}")
                         # Try to reshape or pad
                         if obs_array.size == np.prod(target_shape):
                             final_obs.append(obs_array.reshape(target_shape))
