@@ -3,7 +3,7 @@
 #ifndef CNODE_H
 #define CNODE_H
 
-#include "./../common_lib/cminimax.h"
+#include "../../common_lib/cminimax.h"
 #include <math.h>
 #include <vector>
 #include <stack>
