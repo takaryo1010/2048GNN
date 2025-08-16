@@ -83,15 +83,31 @@ def find_cython_extensions(path=None):
         rpath, _ = os.path.splitext(relpath)
         extname = '.'.join(rpath.split(os.path.sep))
         
+        # Source files list
+        sources = [item]
+        
         # Add common_lib to include directories for ctree extensions
         current_include_dirs = include_dirs.copy()
         if 'ctree' in item:
-            common_lib_path = os.path.join(here, 'lzero', 'mcts', 'ctree', 'common_lib')
-            if os.path.exists(common_lib_path):
-                current_include_dirs.append(common_lib_path)
+            # Add both relative and absolute paths for common_lib
+            ctree_dir = os.path.dirname(item)
+            common_lib_path = os.path.join(ctree_dir, '..', 'common_lib')
+            common_lib_path_abs = os.path.abspath(common_lib_path)
+            if os.path.exists(common_lib_path_abs):
+                current_include_dirs.append(common_lib_path_abs)
+                # Add common library source files
+                cminimax_cpp = os.path.join(common_lib_path_abs, 'cminimax.cpp')
+                utils_cpp = os.path.join(common_lib_path_abs, 'utils.cpp')
+                if os.path.exists(cminimax_cpp):
+                    sources.append(cminimax_cpp)
+                if os.path.exists(utils_cpp):
+                    sources.append(utils_cpp)
+            
+            # Also add the ctree directory itself
+            current_include_dirs.append(os.path.dirname(item))
         
         extensions.append(Extension(
-            extname, [item],
+            extname, sources,
             # include_dirs=[np.get_include()],
             include_dirs=current_include_dirs,
             language="c++",
