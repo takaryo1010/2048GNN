@@ -99,6 +99,9 @@ def find_cython_extensions(path=None):
             common_lib_path = os.path.join(ctree_parent, 'common_lib')
             common_lib_path_abs = os.path.abspath(common_lib_path)
             
+            # ALWAYS add the common_lib path regardless of existence check for now
+            current_include_dirs.append(common_lib_path_abs)
+            
             # Debug: print paths for troubleshooting
             print(f"DEBUG: Processing {item}")
             print(f"DEBUG: ctree_dir = {ctree_dir}")
@@ -106,10 +109,9 @@ def find_cython_extensions(path=None):
             print(f"DEBUG: common_lib_path = {common_lib_path}")
             print(f"DEBUG: common_lib_path_abs = {common_lib_path_abs}")
             print(f"DEBUG: common_lib exists = {os.path.exists(common_lib_path_abs)}")
+            print(f"DEBUG: Added common_lib to include dirs: {common_lib_path_abs}")
             
             if os.path.exists(common_lib_path_abs):
-                current_include_dirs.append(common_lib_path_abs)
-                print(f"DEBUG: Added common_lib to include dirs: {common_lib_path_abs}")
                 # Add common library source files
                 cminimax_cpp = os.path.join(common_lib_path_abs, 'cminimax.cpp')
                 utils_cpp = os.path.join(common_lib_path_abs, 'utils.cpp')
