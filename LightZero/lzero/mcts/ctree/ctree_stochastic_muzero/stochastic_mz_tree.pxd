@@ -3,7 +3,7 @@
 from libcpp.vector cimport vector
 from libcpp cimport bool
 
-cdef extern from "../common_lib/cminimax.h" namespace "tools":
+cdef extern from "cminimax.h" namespace "tools":
     cdef cppclass CMinMaxStats:
         CMinMaxStats() except +
         float maximum, minimum, value_delta_max

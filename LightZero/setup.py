@@ -103,8 +103,11 @@ def find_cython_extensions(path=None):
                 if os.path.exists(utils_cpp):
                     sources.append(utils_cpp)
             
-            # Also add the ctree directory itself
+            # Also add the ctree directory itself and parent directories for relative includes
             current_include_dirs.append(os.path.dirname(item))
+            # Add the ctree parent directory so that "../common_lib/..." can be resolved
+            ctree_parent = os.path.dirname(os.path.dirname(item))
+            current_include_dirs.append(ctree_parent)
         
         extensions.append(Extension(
             extname, sources,
