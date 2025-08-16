@@ -4,10 +4,6 @@ from libcpp.vector cimport vector
 from libcpp cimport bool
 
 
-cdef extern from "../common_lib/cminimax.cpp":
-    pass
-
-
 cdef extern from "../common_lib/cminimax.h" namespace "tools":
     cdef cppclass CMinMaxStats:
         CMinMaxStats() except +
@@ -25,10 +21,6 @@ cdef extern from "../common_lib/cminimax.h" namespace "tools":
         vector[CMinMaxStats] stats_lst
 
         void set_delta(float value_delta_max)
-
-cdef extern from "lib/cnode.cpp":
-    pass
-
 
 cdef extern from "lib/cnode.h" namespace "tree":
     cdef cppclass CAction:
