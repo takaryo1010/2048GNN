@@ -1,0 +1,42 @@
+FROM ubuntu:20.04
+
+# Timezone設定とパッケージ更新
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && \
+    apt-get install -y python3.8 python3.8-dev python3-pip gcc g++ swig git build-essential && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Pythonエイリアス設定
+RUN ln -s /usr/bin/python3.8 /usr/local/bin/python && \
+    ln -s /usr/bin/pip3 /usr/local/bin/pip
+
+# 基本パッケージインストール
+RUN python -m pip install --upgrade pip setuptools wheel && \
+    python -m pip install cython numpy
+
+# PyTorchインストール
+RUN python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+WORKDIR /opendilab
+
+# リポジトリクローン
+RUN git clone https://github.com/takaryo1010/2048GNN.git
+
+# ファイル存在確認
+RUN ls -la ./2048GNN/LightZero/lzero/mcts/ctree/common_lib/
+
+# テストスクリプト実行
+RUN cd ./2048GNN/LightZero && python test_build.py
+
+# 環境変数設定
+ENV PYTHONPATH=/opendilab/2048GNN/LightZero
+ENV CPATH=/opendilab/2048GNN/LightZero
+
+# LightZeroインストール（最後）
+RUN pip install -e ./2048GNN/LightZero
+
+# 最終テスト
+RUN cd ./2048GNN/LightZero && python test_build.py
+
+CMD ["bash"]
