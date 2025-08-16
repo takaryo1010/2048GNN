@@ -99,18 +99,34 @@ def find_cython_extensions(path=None):
             common_lib_path = os.path.join(ctree_parent, 'common_lib')
             common_lib_path_abs = os.path.abspath(common_lib_path)
             
+            # Debug: print paths for troubleshooting
+            print(f"DEBUG: Processing {item}")
+            print(f"DEBUG: ctree_dir = {ctree_dir}")
+            print(f"DEBUG: ctree_parent = {ctree_parent}")
+            print(f"DEBUG: common_lib_path = {common_lib_path}")
+            print(f"DEBUG: common_lib_path_abs = {common_lib_path_abs}")
+            print(f"DEBUG: common_lib exists = {os.path.exists(common_lib_path_abs)}")
+            
             if os.path.exists(common_lib_path_abs):
                 current_include_dirs.append(common_lib_path_abs)
+                print(f"DEBUG: Added common_lib to include dirs: {common_lib_path_abs}")
                 # Add common library source files
                 cminimax_cpp = os.path.join(common_lib_path_abs, 'cminimax.cpp')
                 utils_cpp = os.path.join(common_lib_path_abs, 'utils.cpp')
                 if os.path.exists(cminimax_cpp):
                     sources.append(cminimax_cpp)
+                    print(f"DEBUG: Added cminimax.cpp: {cminimax_cpp}")
                 if os.path.exists(utils_cpp):
                     sources.append(utils_cpp)
-                    
+                    print(f"DEBUG: Added utils.cpp: {utils_cpp}")
+            else:
+                print(f"ERROR: common_lib directory not found at {common_lib_path_abs}")
+                
             # Also add the ctree parent directory for any relative includes
             current_include_dirs.append(ctree_parent)
+            print(f"DEBUG: Final include_dirs: {current_include_dirs}")
+            print(f"DEBUG: Final sources: {sources}")
+            print("="*80)
         
         extensions.append(Extension(
             extname, sources,
