@@ -89,10 +89,16 @@ def find_cython_extensions(path=None):
         # Add common_lib to include directories for ctree extensions
         current_include_dirs = include_dirs.copy()
         if 'ctree' in item:
-            # Add both relative and absolute paths for common_lib
+            # Add the ctree directory itself
+            current_include_dirs.append(os.path.dirname(item))
+            
+            # Find and add common_lib directory - the parent of ctree contains common_lib
             ctree_dir = os.path.dirname(item)
-            common_lib_path = os.path.join(ctree_dir, '..', 'common_lib')
+            # Navigate up to ctree parent directory and find common_lib
+            ctree_parent = os.path.dirname(ctree_dir)
+            common_lib_path = os.path.join(ctree_parent, 'common_lib')
             common_lib_path_abs = os.path.abspath(common_lib_path)
+            
             if os.path.exists(common_lib_path_abs):
                 current_include_dirs.append(common_lib_path_abs)
                 # Add common library source files
@@ -102,11 +108,8 @@ def find_cython_extensions(path=None):
                     sources.append(cminimax_cpp)
                 if os.path.exists(utils_cpp):
                     sources.append(utils_cpp)
-            
-            # Also add the ctree directory itself and parent directories for relative includes
-            current_include_dirs.append(os.path.dirname(item))
-            # Add the ctree parent directory so that "../common_lib/..." can be resolved
-            ctree_parent = os.path.dirname(os.path.dirname(item))
+                    
+            # Also add the ctree parent directory for any relative includes
             current_include_dirs.append(ctree_parent)
         
         extensions.append(Extension(
