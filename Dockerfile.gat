@@ -1,0 +1,50 @@
+# This Dockerfile creates a Docker image optimized for 2048GNN with GAT models
+# It includes the necessary environment to run LightZero with Graph Attention Networks
+
+# Start from Ubuntu 20.04
+FROM ubuntu:20.04
+
+# Set the working directory in the Docker image
+WORKDIR /opendilab
+
+# Install Python 3.8 and other dependencies
+RUN apt-get update && \
+    apt-get install -y python3.8 python3-pip gcc g++ swig git && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create symbolic links for Python and pip
+RUN ln -s /usr/bin/python3.8 /usr/local/bin/python && \
+    ln -s /usr/bin/pip3 /usr/local/bin/pip
+
+# Update pip and setuptools to the latest version
+RUN python -m pip install --upgrade pip setuptools
+
+# Clone 2048GNN repository with GAT-enhanced LightZero
+# This repository contains custom GAT models for the 2048 game
+RUN git clone https://github.com/takaryo1010/2048GNN.git || echo "2048GNN repository not available, skipping..."
+
+
+# Install the standard LightZero package in editable mode
+RUN pip install -e ./LightZero
+
+# Copy 2048GNN directory (including custom LightZero with GAT models)
+# This assumes you have a 2048GNN directory in your build context
+COPY 2048GNN ./2048GNN
+
+# Set Python path to prioritize 2048GNN/LightZero
+ENV PYTHONPATH="/opendilab/2048GNN/LightZero:${PYTHONPATH}"
+
+# Set the working directory to 2048GNN for convenience
+WORKDIR /opendilab/2048GNN
+
+# Install additional dependencies for GAT models if needed
+RUN pip install torch-geometric
+
+# Set Python path to prioritize 2048GNN/LightZero if it exists
+# This allows GAT models to be imported correctly
+ENV PYTHONPATH="/opendilab/2048GNN/LightZero:/opendilab/LightZero:${PYTHONPATH}"
+
+
+# Set default command
+CMD ["/bin/bash"]

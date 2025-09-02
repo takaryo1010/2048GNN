@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  lightzero-gat:
+    build:
+      context: .
+      dockerfile: Dockerfile.gat
+    container_name: lightzero-gat-dev
+    volumes:
+      # Mount the current directory for development
+      - .:/opendilab/2048GNN
+      # Mount the main LightZero if needed
+      - ../LightZero:/opendilab/LightZero
+    environment:
+      - PYTHONPATH=/opendilab/2048GNN/LightZero:/opendilab/LightZero
+    working_dir: /opendilab/2048GNN
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+    
+  # Alternative service using the main LightZero Dockerfile
+  lightzero-main:
+    build:
+      context: ../LightZero
+      dockerfile: Dockerfile
+    container_name: lightzero-main-dev
+    volumes:
+      - .:/opendilab/2048GNN
+    environment:
+      - PYTHONPATH=/opendilab/2048GNN/LightZero:/opendilab/LightZero
+    working_dir: /opendilab/2048GNN
+    stdin_open: true
+    tty: true
+    command: /bin/bash
