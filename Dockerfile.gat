@@ -29,6 +29,8 @@ RUN pip install -e ./LightZero
 # Install additional dependencies for GAT models
 RUN pip install torch-geometric
 
+RUN pip install protobuf==3.20.0
+
 # Clone 2048GNN repository with GAT-enhanced LightZero
 # This repository contains custom GAT models for the 2048 game
 RUN git clone https://github.com/takaryo1010/2048GNN.git || echo "2048GNN repository not available, skipping..."
