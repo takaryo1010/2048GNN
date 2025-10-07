@@ -29,6 +29,7 @@ class GNNRepresentationNetwork(nn.Module):
         grid_size: int = 4,
         include_row_col_edges: bool = True,
         dropout: float = 0.0,
+        edge_mode: str = 'sparse',  # New parameter for edge connectivity
     ):
         """
         Args:
@@ -36,16 +37,17 @@ class GNNRepresentationNetwork(nn.Module):
             num_channels: Hidden dimension for GNN
             num_gnn_layers: Number of GraphSAGE layers
             grid_size: Grid size (4 for 4x4)
-            include_row_col_edges: Whether to include row/column edges
+            include_row_col_edges: Whether to include row/column edges (backward compat)
             dropout: Dropout rate
+            edge_mode: Edge connectivity - 'adjacent', 'sparse', or 'full'
         """
         super().__init__()
         self.observation_shape = observation_shape
         self.num_channels = num_channels
         self.grid_size = grid_size
         
-        # Graph builder
-        self.graph_builder = GraphBuilder(grid_size, include_row_col_edges)
+        # Graph builder with optimized edge mode
+        self.graph_builder = GraphBuilder(grid_size, include_row_col_edges, edge_mode)
         
         # Input dimension: observation channels + 2 (positional encoding)
         in_dim = observation_shape[0] + 2
@@ -278,14 +280,15 @@ class GNNDynamicsNetwork(nn.Module):
         reward_head_hidden_channels: SequenceType = [128, 64],
         last_linear_layer_init_zero: bool = True,
         include_row_col_edges: bool = True,
+        edge_mode: str = 'sparse',  # New parameter
     ):
         super().__init__()
         self.num_channels = num_channels
         self.grid_size = grid_size
         self.num_nodes = grid_size * grid_size
         
-        # Graph builder (reuse edge structure)
-        self.graph_builder = GraphBuilder(grid_size, include_row_col_edges)
+        # Graph builder with optimized edge mode
+        self.graph_builder = GraphBuilder(grid_size, include_row_col_edges, edge_mode)
         
         # Action encoding: broadcast action to all nodes
         # Input: num_channels + action_space_size (one-hot action)
@@ -438,6 +441,9 @@ class GNNStochasticMuZeroModel(nn.Module):
             self.reward_support_size = 1
             self.value_support_size = 1
         
+        # Determine optimal edge mode (sparse for good balance of speed/accuracy)
+        edge_mode = kwargs.get('edge_mode', 'sparse')
+        
         # Representation Network (GNN-based)
         self.representation_network = GNNRepresentationNetwork(
             observation_shape=observation_shape,
@@ -446,6 +452,7 @@ class GNNStochasticMuZeroModel(nn.Module):
             grid_size=grid_size,
             include_row_col_edges=include_row_col_edges,
             dropout=dropout,
+            edge_mode=edge_mode,
         )
         
         # Prediction Network (GNN-based)
@@ -465,6 +472,7 @@ class GNNStochasticMuZeroModel(nn.Module):
             reward_support_size=self.reward_support_size,
             num_gnn_layers=num_gnn_layers,
             grid_size=grid_size,
+            edge_mode=edge_mode,
             reward_head_hidden_channels=reward_head_hidden_channels,
             last_linear_layer_init_zero=last_linear_layer_init_zero,
             include_row_col_edges=include_row_col_edges,
@@ -691,7 +699,8 @@ class GNNStochasticMuZeroModel(nn.Module):
     # 注意点:
     # - 将来的にプロジェクタや予測器（pred）を追加する場合は、ここで別ネットワークを呼ぶ想定。
     # - with_grad=False のときは勾配追跡を止めるので、SSL のターゲット表現として安全に使える。
-        latent_state = latent_state.view(latent_state.size(0), -1)
+        # Use reshape instead of view for better compatibility with non-contiguous tensors
+        latent_state = latent_state.reshape(latent_state.size(0), -1)
 
         # Simple projection
         proj = latent_state

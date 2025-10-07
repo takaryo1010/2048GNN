@@ -32,19 +32,26 @@ use_ture_chance_label_in_chance_encoder = True  # チャンスエンコーダで
 collector_env_num = 8  # コレクター環境数: データ収集用に8つの並列環境
 n_episode = 8  # エピソード数: 1回の収集で8エピソード
 evaluator_env_num = 3  # 評価環境数: 性能評価用に3つの並列環境
-num_simulations = 100  # シミュレーション数: MCTS（モンテカルロ木探索）で100回シミュレーション
-update_per_collect = 200  # 収集ごとの更新回数: データ収集後に200回モデルを更新
-batch_size = 512  # バッチサイズ: 一度に512サンプルで学習
+num_simulations = 50  # シミュレーション数: MCTS（モンテカルロ木探索）で50回シミュレーション
+update_per_collect = 100  # 収集ごとの更新回数: データ収集後に100回モデルを更新（200→100に削減して高速化）
+batch_size = 256  # バッチサイズ: 一度に256サンプルで学習（512→256に削減してより早く学習開始）
 max_env_step = int(1e6)  # 最大環境ステップ: 100万ステップで終了
 reanalyze_ratio = 0.0  # 再解析比率: 過去データの再解析（0なので無効）
 num_of_possible_chance_tile = 2  # 可能なチャンスタイル数: 2（タイル2か4）
 chance_space_size = (grid_size * grid_size) * num_of_possible_chance_tile  # チャンス空間サイズ: 9*2=18 for 3x3
 
 # GNN（グラフニューラルネットワーク）のハイパーパラメータ
-num_gnn_layers = 3  # GNN層数: 3層のグラフ畳み込み
-gnn_hidden_dim = 128  # GNN隠れ層次元: 128次元の特徴ベクトル
-include_row_col_edges = True  # 行・列エッジを含む: 長距離接続を追加（同じ行・列のノード間も接続）
+num_gnn_layers = 2  # GNN層数: 2層のグラフ畳み込み
+gnn_hidden_dim = 96  # GNN隠れ層次元: 96次元の特徴ベクトル
+include_row_col_edges = False  # 行・列エッジを含む: 長距離接続を追加（同じ行・列のノード間も接続）
 gnn_dropout = 0.0  # ドロップアウト率: 過学習防止（0なので無効）
+
+# エッジ接続モード（速度最適化）
+# Edge connectivity mode for speed optimization:
+# - 'adjacent': 最速（4近傍のみ、3x3で~24エッジ）
+# - 'sparse': バランス型（4近傍+距離2、3x3で~36エッジ）
+# - 'full': 最も密（同行列の全ペア、3x3で~72エッジ）
+edge_mode = 'adjacent'  # 推奨: 3x3では'adjacent'で十分（小さいグリッドなので）
 # ==============================================================
 # End of GNN-specific config
 # GNN特有の設定ここまで
@@ -53,7 +60,7 @@ gnn_dropout = 0.0  # ドロップアウト率: 過学習防止（0なので無�
 # メイン設定辞書
 game_2048_gnn_stochastic_muzero_config = dict(
     # 実験名: データ保存先のパスとして使用
-    exp_name=f'data_gnn_stochastic_mz_3x3/game_2048_gnn_3x3_npct-{num_of_possible_chance_tile}_ns{num_simulations}_upc{update_per_collect}_rer{reanalyze_ratio}_bs{batch_size}_gnn{num_gnn_layers}L{gnn_hidden_dim}D_seed0',
+    exp_name=f'data_gnn_stochastic_mz_3x3/game_2048_gnn_3x3_npct-{num_of_possible_chance_tile}_ns{num_simulations}_upc{update_per_collect}_rer{reanalyze_ratio}_bs{batch_size}_gnn{num_gnn_layers}L{gnn_hidden_dim}D_{edge_mode}_seed0',
     
     # 環境設定
     env=dict(
@@ -85,6 +92,7 @@ game_2048_gnn_stochastic_muzero_config = dict(
             grid_size=grid_size,  # グリッドサイズ: 3×3
             include_row_col_edges=include_row_col_edges,  # 行・列エッジを含む
             dropout=gnn_dropout,  # ドロップアウト率
+            edge_mode=edge_mode,  # エッジ接続モード（速度最適化）
             
             # 各ヘッド（予測器）の隠れ層設定
             value_head_hidden_channels=[128, 64],  # 価値ヘッド: 状態の良さを予測（128→64層）

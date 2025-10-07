@@ -14,32 +14,46 @@ class GraphBuilder:
     
     For a 4x4 grid (16 cells):
     - Each cell becomes a node
-    - Edges connect: adjacent cells (up/down/left/right) + same row/column pairs
+    - Edges connect: adjacent cells (up/down/left/right) + optionally same row/column pairs
     - Node features: log2(tile_value), is_empty, position_encoding
     """
     
-    def __init__(self, grid_size: int = 4, include_row_col_edges: bool = True):
+    def __init__(self, grid_size: int = 4, include_row_col_edges: bool = True, 
+                 edge_mode: str = 'full'):
         """
         Args:
             grid_size: Size of the square grid (default 4 for 4x4)
-            include_row_col_edges: Whether to add edges for all pairs in same row/column
+            include_row_col_edges: Whether to add edges for same row/column (backward compatibility)
+            edge_mode: Edge connectivity mode:
+                - 'adjacent': Only 4-connected neighbors (fastest, ~56 edges for 4x4)
+                - 'sparse': Adjacent + next-nearest in rows/cols (fast, ~88 edges)
+                - 'full': All pairs in same row/col (slow, ~200 edges)
         """
         self.grid_size = grid_size
         self.num_nodes = grid_size * grid_size
-        self.include_row_col_edges = include_row_col_edges
+        
+        # Determine edge mode
+        if not include_row_col_edges:
+            self.edge_mode = 'adjacent'
+        else:
+            self.edge_mode = edge_mode
         
         # Pre-compute edge indices (static for fixed grid)
         self.edge_index = self._build_edge_index()
     
     def _build_edge_index(self) -> torch.Tensor:
-        #TODO:多重辺について考える必要があるかも
         """
-        Build edge connectivity matrix.
+        Build edge connectivity matrix based on edge_mode.
         Returns edge_index of shape [2, num_edges]
+        
+        Edge counts for 4x4 grid:
+        - adjacent: ~56 edges (4-connected only)
+        - sparse: ~88 edges (4-connected + distance-2 in rows/cols)
+        - full: ~200 edges (all pairs in same row/col)
         """
         edges = []
         
-        # Add adjacent edges (4-connectivity: up, down, left, right)
+        # Always add adjacent edges (4-connectivity: up, down, left, right)
         for i in range(self.grid_size):
             for j in range(self.grid_size):
                 node_id = i * self.grid_size + j
@@ -56,8 +70,27 @@ class GraphBuilder:
                     edges.append([node_id, neighbor])
                     edges.append([neighbor, node_id])  # bidirectional
         
-        # Add row/column edges for long-range dependencies
-        if self.include_row_col_edges:
+        # Add row/column edges based on mode
+        if self.edge_mode == 'sparse':
+            # Add edges to distance-2 neighbors in rows/cols (middle ground)
+            for i in range(self.grid_size):
+                for j in range(self.grid_size):
+                    node_id = i * self.grid_size + j
+                    
+                    # Distance-2 right
+                    if j < self.grid_size - 2:
+                        neighbor = i * self.grid_size + (j + 2)
+                        edges.append([node_id, neighbor])
+                        edges.append([neighbor, node_id])
+                    
+                    # Distance-2 down
+                    if i < self.grid_size - 2:
+                        neighbor = (i + 2) * self.grid_size + j
+                        edges.append([node_id, neighbor])
+                        edges.append([neighbor, node_id])
+                        
+        elif self.edge_mode == 'full':
+            # Add all pairs in same row/column (original behavior)
             for i in range(self.grid_size):
                 # Row edges: connect all cells in same row
                 for j1 in range(self.grid_size):
@@ -74,6 +107,8 @@ class GraphBuilder:
                         node2 = i2 * self.grid_size + i
                         edges.append([node1, node2])
                         edges.append([node2, node1])
+        
+        # edge_mode == 'adjacent': no additional edges
         
         edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
         return edge_index
@@ -137,8 +172,8 @@ class GraphBuilder:
 
 class GraphSAGEConv(nn.Module):
     """
-    GraphSAGE Convolution Layer
-    Simple and robust GNN layer for aggregating neighbor information
+    GraphSAGE Convolution Layer (Optimized for batched processing)
+    Aggregates neighbor information efficiently across entire batch
     """
     
     def __init__(self, in_dim: int, out_dim: int, agg: str = 'mean', bias: bool = True):
@@ -163,88 +198,76 @@ class GraphSAGEConv(nn.Module):
     
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
         """
-        Forward pass
+        Forward pass - optimized for batch processing
         
         Args:
-            x: Node features [B, N, D_in] or [N, D_in]
+            x: Node features [B, N, D_in]
             edge_index: Edge connectivity [2, E]
         
         Returns:
-            out: Updated node features [B, N, D_out] or [N, D_out]
+            out: Updated node features [B, N, D_out]
         """
-        has_batch = x.dim() == 3
-        
-        if has_batch:
-            batch_size, num_nodes, _ = x.size()
-            device = x.device
-            
-            # Process each graph in batch separately
-            outputs = []
-            for b in range(batch_size):
-                x_b = x[b]  # [N, D_in]
-                out_b = self._forward_single(x_b, edge_index)
-                outputs.append(out_b)
-            
-            out = torch.stack(outputs, dim=0)  # [B, N, D_out]
-        else:
-            out = self._forward_single(x, edge_index)
-        
-        return out
-    
-    def _forward_single(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass for single graph (no batch dimension)
-        
-        Args:
-            x: [N, D_in]
-            edge_index: [2, E]
-        """
+        batch_size, num_nodes, feat_dim = x.size()
         src, dst = edge_index[0], edge_index[1]
-
-        # x: [N, D_in] - 各ノードの特徴行列
-        # edge_index は (src, dst) の組で、dst に対して src の特徴を集約する
-        num_nodes = x.size(0)
-
+        num_edges = src.size(0)
+        
+        # Flatten batch for efficient processing: [B, N, D] -> [B*N, D]
+        x_flat = x.view(batch_size * num_nodes, feat_dim)
+        
+        # Create batch-aware edge indices
+        # For each graph in batch, offset node indices by batch_idx * num_nodes
+        edge_index_batch = []
+        for b in range(batch_size):
+            offset = b * num_nodes
+            edge_index_batch.append(edge_index + offset)
+        edge_index_batch = torch.cat(edge_index_batch, dim=1)  # [2, B*E]
+        
+        src_batch, dst_batch = edge_index_batch[0], edge_index_batch[1]
+        
+        # Aggregate neighbors for all batches at once
         if self.agg == 'mean':
-            # degree を数えて平均を取る方式
-            # deg: [N], 各ノードの隣接数
-            deg = torch.zeros(num_nodes, device=x.device, dtype=x.dtype)
-            deg = deg.index_add_(0, dst, torch.ones_like(dst, dtype=x.dtype))
+            # Count degrees: [B*N]
+            deg = torch.zeros(batch_size * num_nodes, device=x.device, dtype=x.dtype)
+            deg = deg.index_add_(0, dst_batch, torch.ones_like(dst_batch, dtype=x.dtype))
             deg = deg.clamp(min=1.0)
-
-            # neigh: 隣接ノード特徴の和 [N, D_in]
-            neigh = torch.zeros_like(x)
-            neigh = neigh.index_add_(0, dst, x[src])
-
-            # 平均化
+            
+            # Sum neighbor features: [B*N, D]
+            neigh = torch.zeros_like(x_flat)
+            neigh = neigh.index_add_(0, dst_batch, x_flat[src_batch])
+            
+            # Average
             neigh = neigh / deg.unsqueeze(-1)
-
-        elif self.agg == 'max':
-            # 隣接ノードごとの element-wise 最大を取る
-            neigh = torch.zeros_like(x).fill_(float('-inf'))
-            neigh = torch.scatter_reduce(neigh, 0, dst.unsqueeze(-1).expand_as(x[src]), x[src], reduce='amax', include_self=False)
-            # 隣接がないノードの -inf を 0 に置換
+            
+        elif self.agg == 'sum':
+            neigh = torch.zeros_like(x_flat)
+            neigh = neigh.index_add_(0, dst_batch, x_flat[src_batch])
+            
+        else:  # max
+            neigh = torch.zeros_like(x_flat).fill_(float('-inf'))
+            neigh = torch.scatter_reduce(
+                neigh, 0, 
+                dst_batch.unsqueeze(-1).expand_as(x_flat[src_batch]), 
+                x_flat[src_batch], 
+                reduce='amax', 
+                include_self=False
+            )
             neigh = neigh.clamp(min=0)
-
-        else:  # sum
-            # 単純和
-            neigh = torch.zeros_like(x)
-            neigh = neigh.index_add_(0, dst, x[src])
-
-        # 自身の特徴と隣接特徴を連結して変換に入力
-        # - h: [N, 2*D_in]
-        h = torch.cat([x, neigh], dim=-1)  # [N, 2*D_in]
-
-        # 線形変換 + 活性化
-        # - out: [N, D_out]
-        out = F.relu(self.lin(h))  # [N, D_out]
-
+        
+        # Concatenate self and neighbor features: [B*N, 2*D]
+        h = torch.cat([x_flat, neigh], dim=-1)
+        
+        # Linear transformation: [B*N, D_out]
+        out = F.relu(self.lin(h))
+        
+        # Reshape back to batch format: [B, N, D_out]
+        out = out.view(batch_size, num_nodes, self.out_dim)
+        
         return out
 
 
 class GraphSAGE(nn.Module):
     """
-    Multi-layer GraphSAGE network
+    Multi-layer GraphSAGE network (Optimized with LayerNorm)
     """
     
     def __init__(self, in_dim: int, hidden_dim: int, num_layers: int = 3, 
@@ -255,26 +278,27 @@ class GraphSAGE(nn.Module):
             hidden_dim: Hidden feature dimension
             num_layers: Number of GraphSAGE layers
             dropout: Dropout probability
-            use_bn: Whether to use batch normalization
+            use_bn: Whether to use normalization (uses LayerNorm for efficiency)
         """
         super().__init__()
         self.num_layers = num_layers
         self.dropout = dropout
-        self.use_bn = use_bn
+        self.use_norm = use_bn  # Keep parameter name for compatibility
         
         self.convs = nn.ModuleList()
-        self.bns = nn.ModuleList() if use_bn else None
+        self.norms = nn.ModuleList() if use_bn else None
         
         # First layer
         self.convs.append(GraphSAGEConv(in_dim, hidden_dim))
         if use_bn:
-            self.bns.append(nn.BatchNorm1d(hidden_dim))
+            # Use LayerNorm instead of BatchNorm - no transpose needed!
+            self.norms.append(nn.LayerNorm(hidden_dim))
         
         # Hidden layers
         for _ in range(num_layers - 1):
             self.convs.append(GraphSAGEConv(hidden_dim, hidden_dim))
             if use_bn:
-                self.bns.append(nn.BatchNorm1d(hidden_dim))
+                self.norms.append(nn.LayerNorm(hidden_dim))
     
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
         """
@@ -288,12 +312,9 @@ class GraphSAGE(nn.Module):
         for i, conv in enumerate(self.convs):
             x = conv(x, edge_index)
             
-            if self.use_bn and self.bns is not None:
-                # BatchNorm expects [B, C, ...] so we need to transpose
-                # [B, N, D] -> [B, D, N] -> BatchNorm -> [B, N, D]
-                x = x.transpose(1, 2)
-                x = self.bns[i](x)
-                x = x.transpose(1, 2)
+            if self.use_norm and self.norms is not None:
+                # LayerNorm works directly on [B, N, D] - no transpose needed!
+                x = self.norms[i](x)
             
             if i < self.num_layers - 1:  # No dropout on last layer
                 x = F.dropout(x, p=self.dropout, training=self.training)

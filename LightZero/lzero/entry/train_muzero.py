@@ -129,19 +129,24 @@ def train_muzero(
     # --- 追加ログ: モデルのクラス名とパラメータ数を訓練開始時に一度だけ出力 ---
     try:
         # policy がラッパーの場合は内部の torch モデルを持つことがあるため安全にアクセス
-        policy_model = getattr(policy, "model", policy)
-        model_cls_name = type(policy_model).__module__ + "." + type(policy_model).__name__
-        total_params = sum(int(p.numel()) for p in policy_model.parameters())
-        trainable_params = sum(int(p.numel()) for p in policy_model.parameters() if p.requires_grad)
-        logger.info(
-            "Model info: %s | total_params=%d | trainable_params=%d",
-            model_cls_name,
-            total_params,
-            trainable_params,
-        )
+        policy_model = getattr(policy, "model", None)
+        if policy_model is None:
+            # Try to get _model attribute (internal model)
+            policy_model = getattr(policy, "_model", None)
+        
+        if policy_model is not None and hasattr(policy_model, 'parameters'):
+            model_cls_name = type(policy_model).__module__ + "." + type(policy_model).__name__
+            total_params = sum(int(p.numel()) for p in policy_model.parameters())
+            trainable_params = sum(int(p.numel()) for p in policy_model.parameters() if p.requires_grad)
+            logger.info(
+                "Model info: %s | total_params=%d | trainable_params=%d",
+                model_cls_name,
+                total_params,
+                trainable_params,
+            )
     except Exception:
         # ログ取得はデバッグ用なので失敗しても訓練を止めない
-        logger.exception("Failed to fetch model info for logging")
+        logger.error("Failed to fetch model info for logging")
 
     # 事前学習済みモデルのロード（path が与えられている場合）
     if model_path is not None:

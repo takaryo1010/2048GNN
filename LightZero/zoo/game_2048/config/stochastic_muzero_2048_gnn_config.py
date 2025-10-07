@@ -27,12 +27,17 @@ num_gnn_layers = 3
 gnn_hidden_dim = 128
 include_row_col_edges = True  # Include long-range edges for row/column
 gnn_dropout = 0.0
+# Edge connectivity mode for speed optimization:
+# - 'adjacent': ~56 edges, fastest (only 4-neighbors)
+# - 'sparse': ~88 edges, balanced (4-neighbors + distance-2)
+# - 'full': ~200 edges, slowest (all pairs in row/col)
+edge_mode = 'sparse'  # Recommended: 'sparse' for best speed/accuracy tradeoff
 # ==============================================================
 # End of GNN-specific config
 # ==============================================================
 
 game_2048_gnn_stochastic_muzero_config = dict(
-    exp_name=f'data_gnn_stochastic_mz/game_2048_gnn_npct-{num_of_possible_chance_tile}_ns{num_simulations}_upc{update_per_collect}_rer{reanalyze_ratio}_bs{batch_size}_gnn{num_gnn_layers}L{gnn_hidden_dim}D_seed0',
+    exp_name=f'data_gnn_stochastic_mz/game_2048_gnn_npct-{num_of_possible_chance_tile}_ns{num_simulations}_upc{update_per_collect}_rer{reanalyze_ratio}_bs{batch_size}_gnn{num_gnn_layers}L{gnn_hidden_dim}D_{edge_mode}_seed0',
     env=dict(
         stop_value=int(1e6),
         env_id=env_id,
@@ -58,6 +63,7 @@ game_2048_gnn_stochastic_muzero_config = dict(
             grid_size=4,
             include_row_col_edges=include_row_col_edges,
             dropout=gnn_dropout,
+            edge_mode=edge_mode,  # Edge connectivity optimization
             # Head hidden layers
             value_head_hidden_channels=[128, 64],
             policy_head_hidden_channels=[128, 64],
