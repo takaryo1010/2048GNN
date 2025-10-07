@@ -1,0 +1,54 @@
+diff --git a/LightZero/zoo/game_2048/envs/game_2048_env.py b/LightZero/zoo/game_2048/envs/game_2048_env.py
+index c96e1c6..5ae2873 100644
+--- a/LightZero/zoo/game_2048/envs/game_2048_env.py
++++ b/LightZero/zoo/game_2048/envs/game_2048_env.py
+@@ -128,6 +128,8 @@ class Game2048Env(gym.Env):
+         need_flatten=False,
+         # (int) The number of possible tiles that can appear after each move.
+         num_of_possible_chance_tile=2,
++        # (int) The grid size (3 for 3x3, 4 for 4x4)
++        grid_size=4,
+         # (numpy array) The possible tiles that can appear after each move.
+         possible_tiles=np.array([2, 4]),
+         # (numpy array) The probabilities corresponding to each possible tile.
+@@ -167,9 +169,11 @@ class Game2048Env(gym.Env):
+         self.ignore_legal_actions = cfg.ignore_legal_actions
+         self.need_flatten = cfg.need_flatten
+         self.chance = 0
+-        self.chance_space_size = 16  # 32 for 2 and 4, 16 for 2
++        # Get grid_size first to calculate chance_space_size correctly
++        self.size = cfg.get('grid_size', 4)  # Support 3x3 or 4x4 grid
++        self.num_of_possible_chance_tile = cfg.num_of_possible_chance_tile
++        self.chance_space_size = self.size * self.size * self.num_of_possible_chance_tile  # e.g., 9*2=18 for 3x3
+         self.max_tile_num = 0
+-        self.size = 4
+         self.w = self.size
+         self.h = self.size
+         self.squares = self.size * self.size
+@@ -184,7 +188,7 @@ class Game2048Env(gym.Env):
+         # Initialise the random seed of the gym environment.
+         self.seed()
+         self.frames = []
+-        self.num_of_possible_chance_tile = cfg.num_of_possible_chance_tile
++        # num_of_possible_chance_tile already set above
+         self.possible_tiles = cfg.possible_tiles
+         self.tile_probabilities = cfg.tile_probabilities
+         if self.num_of_possible_chance_tile > 2:
+@@ -218,7 +222,7 @@ class Game2048Env(gym.Env):
+ 
+         # Encode the board, ensure correct datatype and shape
+         observation = encode_board(self.board).astype(np.float32)
+-        assert observation.shape == (4, 4, 16)
++        assert observation.shape == (self.size, self.size, 16), f"Expected shape ({self.size}, {self.size}, 16), got {observation.shape}"
+ 
+         # Reshape or transpose the observation as per the requirement
+         if not self.channel_last:
+@@ -312,7 +316,7 @@ class Game2048Env(gym.Env):
+         # Prepare the game state observation
+         observation = encode_board(self.board)
+         observation = observation.astype(np.float32)
+-        assert observation.shape == (4, 4, 16)
++        assert observation.shape == (self.size, self.size, 16), f"Expected shape ({self.size}, {self.size}, 16), got {observation.shape}"
+         if not self.channel_last:
+             observation = np.transpose(observation, [2, 0, 1])
+         if self.need_flatten:

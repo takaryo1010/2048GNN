@@ -1,0 +1,156 @@
+c019460
+
+commit c0194605fca4192e1e1578f4b0c11c88aadb490f
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Tue Oct 7 01:55:52 2025 +0000
+
+    addgnn
+
+ GNN_IMPLEMENTATION_SUCCESS.md                      | 131 +++++
+ GNN_IMPLEMENTATION_SUMMARY.md                      | 173 ++++++
+ GNN_MIGRATION_PROMPT_JA.md                         | 209 +++++++
+ LightZero/lzero/mcts/utils.py                      |  10 +-
+ .../lzero/model/gnn_stochastic_muzero_model.py     | 601 +++++++++++++++++++++
+ LightZero/lzero/model/gnn_utils.py                 | 285 ++++++++++
+ LightZero/lzero/policy/stochastic_muzero.py        |   6 +-
+ LightZero/lzero/policy/utils.py                    |   8 +-
+ .../config/stochastic_muzero_2048_gnn_config.py    | 140 +++++
+ README_GNN.md                                      | 225 ++++++++
+ .../ckpt/ckpt_best.pth.tar                         | Bin 0 -> 8214994 bytes
+ .../ckpt/iteration_0.pth.tar                       | Bin 0 -> 15620670 bytes
+ .../ckpt/iteration_200.pth.tar                     | Bin 0 -> 15621610 bytes
+ .../formatted_total_config.py                      | 247 +++++++++
+ .../git_diff.txt                                   |  87 +++
+ .../git_log.txt                                    |  83 +++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |  25 +
+ .../log/learner/learner_logger.txt                 | 173 ++++++
+ .../events.out.tfevents.1759799699.36db9b2ccd96    | Bin 0 -> 7260 bytes
+ .../total_config.py                                | 247 +++++++++
+ debug_action_format.py                             |  72 +++
+ monitor_training.sh                                |  75 +++
+ quick_gnn_test.py                                  |  32 ++
+ test_gnn_final/formatted_total_config.py           | 242 +++++++++
+ test_gnn_final/git_diff.txt                        |  59 ++
+ test_gnn_final/git_log.txt                         |  83 +++
+ test_gnn_final/log/collector/collector_logger.txt  |   0
+ test_gnn_final/log/evaluator/evaluator_logger.txt  |   0
+ test_gnn_final/log/learner/learner_logger.txt      | 109 ++++
+ .../events.out.tfevents.1759798146.36db9b2ccd96    | Bin 0 -> 40 bytes
+ test_gnn_final/total_config.py                     | 241 +++++++++
+ .../formatted_total_config.py                      | 242 +++++++++
+ test_gnn_final_251007_004947/git_diff.txt          |  59 ++
+ test_gnn_final_251007_004947/git_log.txt           |  83 +++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |   0
+ .../log/learner/learner_logger.txt                 | 109 ++++
+ .../events.out.tfevents.1759798188.36db9b2ccd96    | Bin 0 -> 40 bytes
+ test_gnn_final_251007_004947/total_config.py       | 241 +++++++++
+ test_gnn_final_v2/ckpt/ckpt_best.pth.tar           | Bin 0 -> 1966266 bytes
+ test_gnn_final_v2/formatted_total_config.py        | 242 +++++++++
+ test_gnn_final_v2/git_diff.txt                     |  87 +++
+ test_gnn_final_v2/git_log.txt                      |  83 +++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |  24 +
+ test_gnn_final_v2/log/learner/learner_logger.txt   | 110 ++++
+ .../events.out.tfevents.1759798429.36db9b2ccd96    | Bin 0 -> 1828 bytes
+ test_gnn_final_v2/total_config.py                  | 241 +++++++++
+ test_gnn_model.py                                  | 256 +++++++++
+ test_gnn_quick/formatted_total_config.py           | 242 +++++++++
+ test_gnn_quick/git_diff.txt                        |  23 +
+ test_gnn_quick/git_log.txt                         |  83 +++
+ test_gnn_quick/log/collector/collector_logger.txt  |   0
+ test_gnn_quick/log/evaluator/evaluator_logger.txt  |   0
+ test_gnn_quick/log/learner/learner_logger.txt      | 109 ++++
+ .../events.out.tfevents.1759798032.36db9b2ccd96    | Bin 0 -> 40 bytes
+ test_gnn_quick/total_config.py                     | 241 +++++++++
+ .../formatted_total_config.py                      | 242 +++++++++
+ test_gnn_quick_251007_004831/git_diff.txt          |  59 ++
+ test_gnn_quick_251007_004831/git_log.txt           |  83 +++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |   0
+ .../log/learner/learner_logger.txt                 | 109 ++++
+ .../events.out.tfevents.1759798112.36db9b2ccd96    | Bin 0 -> 40 bytes
+ test_gnn_quick_251007_004831/total_config.py       | 241 +++++++++
+ test_gnn_success/ckpt/ckpt_best.pth.tar            | Bin 0 -> 1966266 bytes
+ test_gnn_success/formatted_total_config.py         | 242 +++++++++
+ test_gnn_success/git_diff.txt                      |  59 ++
+ test_gnn_success/git_log.txt                       |  83 +++
+ .../log/collector/collector_logger.txt             |   0
+ .../log/evaluator/evaluator_logger.txt             |  24 +
+ test_gnn_success/log/learner/learner_logger.txt    | 110 ++++
+ .../events.out.tfevents.1759798285.36db9b2ccd96    | Bin 0 -> 1828 bytes
+ test_gnn_success/total_config.py                   | 241 +++++++++
+ 75 files changed, 7520 insertions(+), 11 deletions(-)
+
+commit 0cf59713203c1a0eb730358bb2655b444db4aee4
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Mon Sep 15 03:53:42 2025 +0000
+
+    protobuf==3.20.0
+
+ Dockerfile.gat | 2 ++
+ 1 file changed, 2 insertions(+)
+
+commit b6824b225044b47683c5baf57ea4c04f920afd20
+Author: takaryo1010 <t.ryota1010@gmail.com>
+Date:   Wed Sep 3 00:01:44 2025 +0000
+
+    Fix Dockerfile.gat: correct pip install order and cleanup
+    
+    - Move LightZero repository clone before pip install
+    - Install torch-geometric in proper sequence
+    - Remove duplicate PYTHONPATH settings
+    - Remove unnecessary COPY command
+    - Ensure proper build order for dependencies
+
+ Dockerfile.gat | 27 +++++++++++----------------
+ 1 file changed, 11 insertions(+), 16 deletions(-)
+
+commit 5d2350fcdd540f0de570b591c7e340262568c475
+Author: takaryo1010 <t.ryota1010@gmail.com>
+Date:   Tue Sep 2 23:59:40 2025 +0000
+
+    Add GAT environment setup and Docker support
+    
+    - Add Dockerfile.gat for GAT-specific development environment
+    - Add docker-compose.yml for easy development setup
+    - Add convenience scripts (run_gat.sh, setup_env.sh) for PYTHONPATH management
+    - Include compiled ctree binaries from main LightZero for GAT compatibility
+    - Set up proper PYTHONPATH to prioritize 2048GNN/LightZero over main LightZero
+    
+    This ensures GAT models work correctly without manual PYTHONPATH configuration.
+
+ Dockerfile.gat                                     |  50 +++++++++++++++++++++
+ .../ez_tree.cpython-38-x86_64-linux-gnu.so         | Bin 0 -> 2528336 bytes
+ .../mcts/ctree/ctree_efficientzero/ez_tree.pxd     |  10 ++++-
+ .../gmz_tree.cpython-38-x86_64-linux-gnu.so        | Bin 0 -> 3273520 bytes
+ .../mcts/ctree/ctree_gumbel_muzero/gmz_tree.pxd    |  10 ++++-
+ .../mcts/ctree/ctree_gumbel_muzero/lib/cnode.h     |   2 +-
+ .../lzero/mcts/ctree/ctree_muzero/lib/cnode.h      |   2 +-
+ .../mz_tree.cpython-38-x86_64-linux-gnu.so         | Bin 0 -> 2401736 bytes
+ .../lzero/mcts/ctree/ctree_muzero/mz_tree.pxd      |  10 ++++-
+ .../ezs_tree.cpython-38-x86_64-linux-gnu.so        | Bin 0 -> 3244424 bytes
+ .../ctree/ctree_sampled_efficientzero/ezs_tree.pxd |  10 ++++-
+ .../smz_tree.cpython-38-x86_64-linux-gnu.so        | Bin 0 -> 3176544 bytes
+ .../mcts/ctree/ctree_sampled_muzero/smz_tree.pxd   |  10 ++++-
+ .../mcts/ctree/ctree_stochastic_muzero/lib/cnode.h |   2 +-
+ ...ochastic_mz_tree.cpython-38-x86_64-linux-gnu.so | Bin 0 -> 2543104 bytes
+ .../ctree_stochastic_muzero/stochastic_mz_tree.pxd |  10 ++++-
+ docker-compose.yml                                 |  34 ++++++++++++++
+ gat_env.sh                                         |  14 ++++++
+ run_gat.sh                                         |  12 +++++
+ run_gat_script.sh                                  |  19 ++++++++
+ setup_env.sh                                       |   5 +++
+ 21 files changed, 191 insertions(+), 9 deletions(-)
+
+commit 6662daafa4bd2469232484f70d0201d91c125806
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Sat Aug 16 21:45:56 2025 +0900
+
+    少し削除
+
+ LightZero/Dockerfile.minimal |  0
+ LightZero/Dockerfile.test    | 42 ------------------------------------------
+ LightZero/test_build.py      | 44 --------------------------------------------
+ 3 files changed, 86 deletions(-)

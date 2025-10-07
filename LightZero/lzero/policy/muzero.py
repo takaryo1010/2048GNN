@@ -24,14 +24,12 @@ from lzero.policy import scalar_transform, InverseScalarTransform, cross_entropy
 @POLICY_REGISTRY.register('muzero')
 class MuZeroPolicy(Policy):
     """
-    Overview:
-        if self._cfg.model.model_type in ["conv", "mlp", "gat"]:
-            The policy class for MuZero.
-        if self._cfg.model.model_type == ["conv_context", "mlp_context"]:
-            The policy class for MuZero w/ Context, a variant of MuZero.
-            This variant retains the same training settings as MuZero but diverges during inference
-            by employing a k-step recursively predicted latent representation at the root node,
-            proposed in the UniZero paper https://arxiv.org/abs/2406.10667.
+    日本語注釈:
+        MuZero 系のポリシー基底クラスです。`Policy` 基底クラスの `forward` 呼び出しは
+        実行モード（learn / collect / eval 等）に応じて `_forward_learn`, `_forward_collect`,
+        `_forward_eval` などのメソッドにルーティングされます。
+        collector が `self._policy.forward(...)` を呼ぶと、最終的に各派生クラスの `_forward_collect` が
+        実行され、そこでモデルの `initial_inference` → MCTS → 行動選択 の流れが行われます。
     """
 
     # The default_config for MuZero policy.
@@ -269,6 +267,9 @@ class MuZeroPolicy(Policy):
         """
         self.train_iter = train_iter
         self.env_step = env_step
+    # 日本語注釈:
+    # トレーニング反復数や環境ステップ数をポリシーに伝えるためのメソッド。
+    # これらは学習率スケジューラや温度スケジューリングに使われることがあります。
 
     def _init_learn(self) -> None:
         """

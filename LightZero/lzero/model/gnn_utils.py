@@ -32,6 +32,7 @@ class GraphBuilder:
         self.edge_index = self._build_edge_index()
     
     def _build_edge_index(self) -> torch.Tensor:
+        #TODO:多重辺について考える必要があるかも
         """
         Build edge connectivity matrix.
         Returns edge_index of shape [2, num_edges]
@@ -89,19 +90,28 @@ class GraphBuilder:
             node_features: [B, N, D] where N=16 nodes, D is feature dimension
             edge_index: [2, E] where E is number of edges (shared across batch)
         """
+        # バッチサイズ
         batch_size = obs.size(0)
-        
-        # Move edge_index to same device as obs
+
+        # edge_index を観測と同じデバイスに移す
+        # - edge_index: [2, E], 事前計算されたエッジインデックス（グリッド接続）
         edge_index = self.edge_index.to(obs.device)
-        
-        # Extract node features from observation
-        # obs shape: [B, C, H, W] -> flatten spatial: [B, C, H*W] -> transpose: [B, H*W, C]
+
+        # 観測からノード特徴を抽出
+        # - obs: [B, C, H, W]
+        # - obs.flatten(2) -> [B, C, H*W]
+        # - transpose(1,2) -> [B, H*W, C]  (ここで N = H*W はノード数)
         node_features = obs.flatten(2).transpose(1, 2)  # [B, N, C]
-        
-        # Add positional encoding
+
+        # 位置情報を追加
+        # - pos_encoding: [B, N, 2] (row_norm, col_norm)
+        # - concat -> node_features: [B, N, C+2]
         pos_encoding = self._get_positional_encoding(batch_size, obs.device)
         node_features = torch.cat([node_features, pos_encoding], dim=-1)
-        
+
+        # 戻り値:
+        # - node_features: [B, N, D_in]  (D_in = C + 2)
+        # - edge_index: [2, E]
         return node_features, edge_index
     
     def _get_positional_encoding(self, batch_size: int, device: torch.device) -> torch.Tensor:
@@ -190,39 +200,45 @@ class GraphSAGEConv(nn.Module):
             edge_index: [2, E]
         """
         src, dst = edge_index[0], edge_index[1]
-        
-        # Aggregate neighbor features
+
+        # x: [N, D_in] - 各ノードの特徴行列
+        # edge_index は (src, dst) の組で、dst に対して src の特徴を集約する
         num_nodes = x.size(0)
-        
+
         if self.agg == 'mean':
-            # Count degree for each node
+            # degree を数えて平均を取る方式
+            # deg: [N], 各ノードの隣接数
             deg = torch.zeros(num_nodes, device=x.device, dtype=x.dtype)
             deg = deg.index_add_(0, dst, torch.ones_like(dst, dtype=x.dtype))
             deg = deg.clamp(min=1.0)
-            
-            # Sum neighbor features
+
+            # neigh: 隣接ノード特徴の和 [N, D_in]
             neigh = torch.zeros_like(x)
             neigh = neigh.index_add_(0, dst, x[src])
-            
-            # Average
+
+            # 平均化
             neigh = neigh / deg.unsqueeze(-1)
-        
+
         elif self.agg == 'max':
-            # Max pooling over neighbors
+            # 隣接ノードごとの element-wise 最大を取る
             neigh = torch.zeros_like(x).fill_(float('-inf'))
             neigh = torch.scatter_reduce(neigh, 0, dst.unsqueeze(-1).expand_as(x[src]), x[src], reduce='amax', include_self=False)
-            neigh = neigh.clamp(min=0)  # Replace -inf with 0 for nodes without neighbors
-        
+            # 隣接がないノードの -inf を 0 に置換
+            neigh = neigh.clamp(min=0)
+
         else:  # sum
+            # 単純和
             neigh = torch.zeros_like(x)
             neigh = neigh.index_add_(0, dst, x[src])
-        
-        # Concatenate self and neighbor features
+
+        # 自身の特徴と隣接特徴を連結して変換に入力
+        # - h: [N, 2*D_in]
         h = torch.cat([x, neigh], dim=-1)  # [N, 2*D_in]
-        
-        # Linear transformation + activation
+
+        # 線形変換 + 活性化
+        # - out: [N, D_out]
         out = F.relu(self.lin(h))  # [N, D_out]
-        
+
         return out
 
 

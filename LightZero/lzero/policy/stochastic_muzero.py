@@ -22,8 +22,14 @@ from lzero.policy.utils import plot_topk_accuracy, visualize_avg_softmax, plot_a
 @POLICY_REGISTRY.register('stochastic_muzero')
 class StochasticMuZeroPolicy(MuZeroPolicy):
     """
-    Overview:
-        The policy class for Stochastic MuZero proposed in the paper https://openreview.net/pdf?id=X6D9bAHhBQ1.
+    日本語注釈:
+    StochasticMuZero 用のポリシークラスです。collector からは `self._policy.forward(...)` が呼ばれ、
+    最終的にこのクラスの `_forward_collect` が実行される設計になっています。
+    主な責務:
+    - モデルの選択（default_model）: config に応じて GNN / conv / mlp 用のモデルを返す
+    - collect モード初期化（_init_collect）: MCTS ユーティリティの初期化
+    - collect 時の前方伝播（_forward_collect）: initial_inference を呼び、MCTS を走らせ、
+      action / visit 分布 / value 等を返す。
     """
 
     # The default_config for Stochastic MuZero policy.
@@ -214,11 +220,15 @@ class StochasticMuZeroPolicy(MuZeroPolicy):
             The user can define and use customized network model but must obey the same interface definition indicated \
             by import_names path. For MuZero, ``lzero.model.muzero_model.MuZeroModel``.
         """
+        # 日本語注釈:
+        # config の model.model_type に応じて適切なモデルクラス名と import path を返します。
+        # 今回の config で model_type='gnn' に設定されている場合は GNN 用モデルを返します。
         if self._cfg.model.model_type == "conv":
             return 'StochasticMuZeroModel', ['lzero.model.stochastic_muzero_model']
         elif self._cfg.model.model_type == "mlp":
             return 'StochasticMuZeroModelMLP', ['lzero.model.stochastic_muzero_model_mlp']
         elif self._cfg.model.model_type == "gnn":
+            # GNN 用の実装: lzero.model.gnn_stochastic_muzero_model の中の GNNStochasticMuZeroModel が使われる
             return 'GNNStochasticMuZeroModel', ['lzero.model.gnn_stochastic_muzero_model']
         else:
             raise ValueError("model type {} is not supported".format(self._cfg.model.model_type))
@@ -567,10 +577,17 @@ class StochasticMuZeroPolicy(MuZeroPolicy):
         Overview:
             Collect mode init method. Called by ``self.__init__``. Initialize the collect model and MCTS utils.
         """
+        # 日本語注釈:
+        # collect モードの初期化を行います。
+        # - _collect_model: collect 時に使用するモデル（通常は学習用モデルと同じインスタンス）
+        # - _mcts_collect: MCTS ユーティリティ（C++ 実装か Python 実装かを config で切替）
+        # - _collect_mcts_temperature: MCTS で使用する温度パラメータ（初期値）
         self._collect_model = self._model
         if self._cfg.mcts_ctree:
+            # C++ 実装の MCTS ツリーを使用
             self._mcts_collect = MCTSCtree(self._cfg)
         else:
+            # Python 実装の MCTS ツリーを使用
             self._mcts_collect = MCTSPtree(self._cfg)
         self._collect_mcts_temperature = 1
 
@@ -614,6 +631,15 @@ class StochasticMuZeroPolicy(MuZeroPolicy):
             ready_env_id = np.arange(active_collect_env_num)
         output = {i: None for i in ready_env_id}
         with torch.no_grad():
+            # 日本語注釈:
+            # collect 用の前方伝播の大まかな流れ:
+            # 1) model.initial_inference(data) を実行して root の潜在表現/報酬/価値/方策ロジットを取得
+            # 2) MCTS の roots を初期化し、prepare で root の prior (policy_logits) 等を設定
+            # 3) self._mcts_collect.search(...) を呼んで探索を実行（MCTS が latent_state を使って rollout）
+            # 4) roots.get_distributions(), roots.get_values() から visit 分布と値を取り出す
+            # 5) 各環境ごとに select_action を通して最終行動を決定し、collector が期待する形式で返す
+            #
+            # collector はこの出力を受け取って game_segment に保存します（visit 分布・value・predicted_value 等）
             # data shape [B, S x C, W, H], e.g. {Tensor:(B, 12, 96, 96)}
             network_output = self._collect_model.initial_inference(data)
             latent_state_roots, reward_roots, pred_values, policy_logits = mz_network_output_unpack(network_output)

@@ -67,22 +67,35 @@ class GNNRepresentationNetwork(nn.Module):
         Returns:
             latent_state: [B, num_channels, H, W] to maintain compatibility with existing code
         """
+        # バッチサイズを取得
+        # - x: 入力観測テンソル, 期待形状 [B, C, H, W]
+        # - batch_size: B
         batch_size = x.size(0)
-        
-        # Convert observation to graph
+
+        # 観測をグラフ表現に変換
+        # - self.graph_builder.obs_to_graph(x) は次を返す
+        #   node_features: [B, N, D_in]  (N = H*W ノード数, D_in = C + 2(pos_encoding))
+        #   edge_index: [2, E] (エッジ一覧, バッチで共有される定数)
+        # - ここで node_features は各ノード（盤面の各セル）に対応する特徴量行列
         node_features, edge_index = self.graph_builder.obs_to_graph(x)
-        # node_features: [B, N, D_in]
-        
-        # Apply GNN
+
+        # GNN を通す
+        # - self.gnn(node_features, edge_index) は GraphSAGE の forward を呼ぶ
+        # - 入力: node_features [B, N, D_in], edge_index [2, E]
+        # - 出力: node_embeddings [B, N, num_channels]
+        #   各ノードごとに num_channels 次元の埋め込みが得られる
         node_embeddings = self.gnn(node_features, edge_index)
-        # node_embeddings: [B, N, num_channels]
-        
-        # Reshape back to grid format for compatibility with existing heads
-        # [B, N, C] -> [B, C, H, W]
+
+        # ノード埋め込みをグリッド形式に戻す
+        # - node_embeddings: [B, N, num_channels]
+        # - transpose(1,2) -> [B, num_channels, N]
+        # - reshape(batch_size, num_channels, H, W) -> [B, num_channels, H, W]
+        # - これにより downstream の CNN 互換のヘッド（value/policy head）がそのまま使える
         latent_state = node_embeddings.transpose(1, 2).reshape(
             batch_size, self.num_channels, self.grid_size, self.grid_size
         )
-        
+
+        # 返り値: latent_state [B, num_channels, H, W]
         return latent_state
 
 
@@ -497,6 +510,11 @@ class GNNStochasticMuZeroModel(nn.Module):
             chance_encoding: [B, chance_space_size]
             chance_onehot: [B, chance_space_size] one-hot encoded
         """
+        # 日本語注釈:
+        # observation ([B, C, H, W]) を用いて「chance（確率的事象）」の分布を予測します。
+        # 返り値:
+        # - chance_encoding: [B, chance_space_size]（連続的なスコア／ロジット）
+        # - chance_onehot: [B, chance_space_size]（one-hot 形式、テストや解析用）
         output = self.chance_encoder(observation)
         return output
     
@@ -510,10 +528,52 @@ class GNNStochasticMuZeroModel(nn.Module):
         Returns:
             MZNetworkOutput with value, reward, policy_logits, latent_state
         """
+        # 日本語注釈:
+        # initial_inference は観測 obs から根ノードの潜在状態 latent_state を生成し、
+        # そこから policy_logits と value を返します。collector/_forward_collect はこの出力を
+        # MCTS の root prior（policy_logits）や root value（value）として使用します。
+        #
+        # 入力:
+        # - obs: torch.Tensor, 形状 [B, C, H, W]（GNN 実装では各フレームがチャネルとして結合されていることが多い）
+        #
+        # 出力 (MZNetworkOutput):
+        # - value: torch.Tensor, 形状 [B, value_support_size]（categorical なら分布 logits、そうでなければスカラー）
+        # - reward: list/torch.Tensor, ここでは root の段階なのでダミー（長さ B の 0.0 のリスト）を返す実装になっている
+        # - policy_logits: torch.Tensor, 形状 [B, action_space_size]（ルートノードの prior）
+        # - latent_state: torch.Tensor, 形状 [B, num_channels, H, W]（内部で GNN により生成されるノード埋め込みをグリッドに再構成したもの）
+        #
+        # 注意点:
+        # - この実装は GNN のノード埋め込みを [B, C, H, W] に変換して返すことで既存の MuZero フローと互換性を保っています。
+        # - collector の側ではこの latent_state を MCTS の root state として渡し、以降 recurrent_inference を反復的に呼び出します。
+        # --- ここから重要な3行: 入出力の意味と呼び出し元との関係 ---
+        # batch_size の取得:
+        # - obs: torch.Tensor, 形状 [B, C, H, W]
+        # - ここで batch_size を取っておくことで、root の報酬（ダミー）を B 個返す等の処理で使います。
+        #
+        # latent_state の計算:
+        # - self._representation(obs) は GNN 表現器（GNNRepresentationNetwork）を呼び出します。
+        # - 入力 obs ([B, C, H, W]) を内部でノード表現 [B, N, D_in] に変換し、GraphSAGE を適用して
+        #   ノード埋め込み [B, N, num_channels] を得た後、再構成して [B, num_channels, H, W] を返します。
+        # - これは MuZero の既存フローの互換性のために [B, C, H, W] 形式で返されています。
+        #
+        # policy_logits, value の計算:
+        # - self._prediction(latent_state) は GNNPredictionNetwork を呼び、
+        #   policy_logits: [B, action_space_size]
+        #   value: [B, value_support_size]
+        #   を返します。
+        # - collector / policy の `_forward_collect` はこの policy_logits を MCTS の root prior（先行分布）として用い、
+        #   value を root の評価値（バックアップ初期値）として利用します。
+        #
+        # 注意点:
+        # - latent_state は内部的にはノード表現を保持しているため、GNN と CNN の実装で形状は同じでも意味が異なります。
+        # - action/chance の取り扱いや categorical distribution の扱いは model の上流で行われるため、
+        #   ここでは形状互換性を最優先にして出力しています。
+        # -----------------------------------------------
         batch_size = obs.size(0)
         latent_state = self._representation(obs)
         policy_logits, value = self._prediction(latent_state)
-        
+
+        # reward は root の段階ではまだ定義されないため 0 を返す慣習になっています。
         return MZNetworkOutput(
             value=value,
             reward=[0.0 for _ in range(batch_size)],
@@ -546,6 +606,37 @@ class GNNStochasticMuZeroModel(nn.Module):
               -> use afterstate_dynamics_network to get next_latent_state, then prediction_network
               -> policy_logits has action_space_size dimensions
         """
+    # 日本語注釈:
+    # recurrent_inference は MuZero の反復推論を実行します。collector からの呼び出しは以下のような流れになります：
+    # 1) root（initial_inference の出力）から MCTS が複数の action を探索する際、各 action に対して recurrent_inference が呼ばれます。
+    # 2) この実装は "afterstate" を明示的に扱うことで確率的遷移（chance）を実装しています。
+    #
+    # モード:
+    # - afterstate=False（通常の action -> afterstate）:
+    #     入力 state: latent_state [B, C, H, W]
+    #     option: action（index か one-hot どちらでも対応）
+    #     処理: dynamics_network(state, action) -> next_afterstate ([B, C, H, W]), reward ([B, reward_support_size])
+    #     その後 afterstate_prediction_network(next_afterstate) によって
+    #         policy_logits (chance の分布, 形状 [B, chance_space_size]) と value ([B, value_support_size]) を得る
+    #     返り値の latent_state は next_afterstate（＝afterstate）で、これが MCTS の次ノードとして使用されます。
+    #
+    # - afterstate=True（afterstate + chance -> next latent state）:
+    #     入力 state: afterstate [B, C, H, W]
+    #     option: chance（index or one-hot, 形状 [B] または [B, chance_space_size]）
+    #     処理: afterstate_dynamics_network(afterstate, chance) -> next_latent_state ([B, C, H, W]), reward
+    #     その後 prediction_network(next_latent_state) によって action に対する policy_logits ([B, action_space_size]) と value を得る
+    #     返り値の latent_state は next_latent_state（＝環境の次状態）であり、以降の MCTS 展開で使われます。
+    #
+    # 入出力のまとめ (MZNetworkOutput):
+    # - value: [B, value_support_size]
+    # - reward: [B, reward_support_size]
+    # - policy_logits: [B, chance_space_size] または [B, action_space_size]（afterstate フラグに依存）
+    # - latent_state: [B, C, H, W]（afterstate または next_latent_state）
+    #
+    # 実装上の注意:
+    # - action/chance の表現は index でも one-hot でも受け付けるようになっている（内部で変換される）。
+    # - GNN 部分はノード単位で処理するため、内部では [B, N, C] の表現に変換されるが、
+    #   呼び出し側（Policy/MCTS）は [B, C, H, W] を期待しているため再構成して返している。
         if afterstate:
             # state is afterstate, option is chance
             # afterstate + chance -> next_latent_state
@@ -586,12 +677,25 @@ class GNNStochasticMuZeroModel(nn.Module):
         Project latent state for self-supervised learning
         (Placeholder for future SSL implementation)
         """
-        # Flatten latent state
+    # 日本語注釈:
+    # 自己教師あり学習（SSL）が有効な場合に使用される潜在表現の射影関数。
+    # 現状はプレースホルダ実装で、単純に flatten して L2 正規化を行います。
+    #
+    # 入力:
+    # - latent_state: [B, C, H, W]
+    # - with_grad: bool（False の場合は torch.no_grad() で実行される）
+    #
+    # 出力:
+    # - proj: [B, C*H*W]（L2 正規化済み）
+    #
+    # 注意点:
+    # - 将来的にプロジェクタや予測器（pred）を追加する場合は、ここで別ネットワークを呼ぶ想定。
+    # - with_grad=False のときは勾配追跡を止めるので、SSL のターゲット表現として安全に使える。
         latent_state = latent_state.view(latent_state.size(0), -1)
-        
+
         # Simple projection
         proj = latent_state
-        
+
         if with_grad:
             proj = proj / (torch.norm(proj, dim=-1, keepdim=True) + 1e-8)
             return proj
