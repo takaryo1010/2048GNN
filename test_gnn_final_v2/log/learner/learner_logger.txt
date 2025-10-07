@@ -1,0 +1,110 @@
+[2025-10-07 00:53:49][base_learner.py:360][INFO] [RANK0]: DI-engine DRL Policy
+GNNStochasticMuZeroModel(
+  (representation_network): GNNRepresentationNetwork(
+    (gnn): GraphSAGE(
+      (convs): ModuleList(
+        (0): GraphSAGEConv(
+          (lin): Linear(in_features=36, out_features=64, bias=True)
+        )
+        (1): GraphSAGEConv(
+          (lin): Linear(in_features=128, out_features=64, bias=True)
+        )
+      )
+      (bns): ModuleList(
+        (0-1): 2 x BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+  )
+  (prediction_network): GNNPredictionNetwork(
+    (value_head): GNNValueHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=192, out_features=64, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=64, out_features=32, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=32, out_features=601, bias=True)
+      )
+    )
+    (policy_head): GNNPolicyHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=192, out_features=64, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=64, out_features=32, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=32, out_features=4, bias=True)
+      )
+    )
+  )
+  (dynamics_network): GNNDynamicsNetwork(
+    (action_encoder): Linear(in_features=4, out_features=64, bias=True)
+    (gnn): GraphSAGE(
+      (convs): ModuleList(
+        (0): GraphSAGEConv(
+          (lin): Linear(in_features=256, out_features=64, bias=True)
+        )
+        (1): GraphSAGEConv(
+          (lin): Linear(in_features=128, out_features=64, bias=True)
+        )
+      )
+      (bns): ModuleList(
+        (0-1): 2 x BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (reward_head): Sequential(
+      (0): Linear(in_features=192, out_features=64, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=64, out_features=32, bias=True)
+      (3): ReLU()
+      (4): Linear(in_features=32, out_features=601, bias=True)
+    )
+  )
+  (afterstate_dynamics_network): GNNDynamicsNetwork(
+    (action_encoder): Linear(in_features=32, out_features=64, bias=True)
+    (gnn): GraphSAGE(
+      (convs): ModuleList(
+        (0): GraphSAGEConv(
+          (lin): Linear(in_features=256, out_features=64, bias=True)
+        )
+        (1): GraphSAGEConv(
+          (lin): Linear(in_features=128, out_features=64, bias=True)
+        )
+      )
+      (bns): ModuleList(
+        (0-1): 2 x BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (reward_head): Sequential(
+      (0): Linear(in_features=192, out_features=64, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=64, out_features=32, bias=True)
+      (3): ReLU()
+      (4): Linear(in_features=32, out_features=601, bias=True)
+    )
+  )
+  (afterstate_prediction_network): GNNPredictionNetwork(
+    (value_head): GNNValueHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=192, out_features=64, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=64, out_features=32, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=32, out_features=601, bias=True)
+      )
+    )
+    (policy_head): GNNPolicyHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=192, out_features=64, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=64, out_features=32, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=32, out_features=32, bias=True)
+      )
+    )
+  )
+  (chance_encoder): Sequential(
+    (0): Linear(in_features=32, out_features=64, bias=True)
+    (1): ReLU()
+    (2): Linear(in_features=64, out_features=64, bias=True)
+  )
+)
+[2025-10-07 00:54:20][base_learner.py:360][INFO] [RANK0]: learner save ckpt in ./test_gnn_final_v2/ckpt/ckpt_best.pth.tar

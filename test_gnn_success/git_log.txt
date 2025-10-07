@@ -1,0 +1,83 @@
+0cf5971
+
+commit 0cf59713203c1a0eb730358bb2655b444db4aee4
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Mon Sep 15 03:53:42 2025 +0000
+
+    protobuf==3.20.0
+
+ Dockerfile.gat | 2 ++
+ 1 file changed, 2 insertions(+)
+
+commit b6824b225044b47683c5baf57ea4c04f920afd20
+Author: takaryo1010 <t.ryota1010@gmail.com>
+Date:   Wed Sep 3 00:01:44 2025 +0000
+
+    Fix Dockerfile.gat: correct pip install order and cleanup
+    
+    - Move LightZero repository clone before pip install
+    - Install torch-geometric in proper sequence
+    - Remove duplicate PYTHONPATH settings
+    - Remove unnecessary COPY command
+    - Ensure proper build order for dependencies
+
+ Dockerfile.gat | 27 +++++++++++----------------
+ 1 file changed, 11 insertions(+), 16 deletions(-)
+
+commit 5d2350fcdd540f0de570b591c7e340262568c475
+Author: takaryo1010 <t.ryota1010@gmail.com>
+Date:   Tue Sep 2 23:59:40 2025 +0000
+
+    Add GAT environment setup and Docker support
+    
+    - Add Dockerfile.gat for GAT-specific development environment
+    - Add docker-compose.yml for easy development setup
+    - Add convenience scripts (run_gat.sh, setup_env.sh) for PYTHONPATH management
+    - Include compiled ctree binaries from main LightZero for GAT compatibility
+    - Set up proper PYTHONPATH to prioritize 2048GNN/LightZero over main LightZero
+    
+    This ensures GAT models work correctly without manual PYTHONPATH configuration.
+
+ Dockerfile.gat                                     |  50 +++++++++++++++++++++
+ .../ez_tree.cpython-38-x86_64-linux-gnu.so         | Bin 0 -> 2528336 bytes
+ .../mcts/ctree/ctree_efficientzero/ez_tree.pxd     |  10 ++++-
+ .../gmz_tree.cpython-38-x86_64-linux-gnu.so        | Bin 0 -> 3273520 bytes
+ .../mcts/ctree/ctree_gumbel_muzero/gmz_tree.pxd    |  10 ++++-
+ .../mcts/ctree/ctree_gumbel_muzero/lib/cnode.h     |   2 +-
+ .../lzero/mcts/ctree/ctree_muzero/lib/cnode.h      |   2 +-
+ .../mz_tree.cpython-38-x86_64-linux-gnu.so         | Bin 0 -> 2401736 bytes
+ .../lzero/mcts/ctree/ctree_muzero/mz_tree.pxd      |  10 ++++-
+ .../ezs_tree.cpython-38-x86_64-linux-gnu.so        | Bin 0 -> 3244424 bytes
+ .../ctree/ctree_sampled_efficientzero/ezs_tree.pxd |  10 ++++-
+ .../smz_tree.cpython-38-x86_64-linux-gnu.so        | Bin 0 -> 3176544 bytes
+ .../mcts/ctree/ctree_sampled_muzero/smz_tree.pxd   |  10 ++++-
+ .../mcts/ctree/ctree_stochastic_muzero/lib/cnode.h |   2 +-
+ ...ochastic_mz_tree.cpython-38-x86_64-linux-gnu.so | Bin 0 -> 2543104 bytes
+ .../ctree_stochastic_muzero/stochastic_mz_tree.pxd |  10 ++++-
+ docker-compose.yml                                 |  34 ++++++++++++++
+ gat_env.sh                                         |  14 ++++++
+ run_gat.sh                                         |  12 +++++
+ run_gat_script.sh                                  |  19 ++++++++
+ setup_env.sh                                       |   5 +++
+ 21 files changed, 191 insertions(+), 9 deletions(-)
+
+commit 6662daafa4bd2469232484f70d0201d91c125806
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Sat Aug 16 21:45:56 2025 +0900
+
+    少し削除
+
+ LightZero/Dockerfile.minimal |  0
+ LightZero/Dockerfile.test    | 42 ------------------------------------------
+ LightZero/test_build.py      | 44 --------------------------------------------
+ 3 files changed, 86 deletions(-)
+
+commit 8f4b369c73da468e546006911378ff455ffce5dc
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Sat Aug 16 18:22:02 2025 +0900
+
+    Add test build script and test Dockerfile
+
+ LightZero/Dockerfile.test | 42 ++++++++++++++++++++++++++++++++++++++++++
+ LightZero/test_build.py   | 44 ++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 86 insertions(+)

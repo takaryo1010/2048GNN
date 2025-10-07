@@ -1,0 +1,173 @@
+[2025-10-07 01:14:59][base_learner.py:360][INFO] [RANK0]: DI-engine DRL Policy
+GNNStochasticMuZeroModel(
+  (representation_network): GNNRepresentationNetwork(
+    (gnn): GraphSAGE(
+      (convs): ModuleList(
+        (0): GraphSAGEConv(
+          (lin): Linear(in_features=36, out_features=128, bias=True)
+        )
+        (1-2): 2 x GraphSAGEConv(
+          (lin): Linear(in_features=256, out_features=128, bias=True)
+        )
+      )
+      (bns): ModuleList(
+        (0-2): 3 x BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+  )
+  (prediction_network): GNNPredictionNetwork(
+    (value_head): GNNValueHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=64, out_features=601, bias=True)
+      )
+    )
+    (policy_head): GNNPolicyHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=64, out_features=4, bias=True)
+      )
+    )
+  )
+  (dynamics_network): GNNDynamicsNetwork(
+    (action_encoder): Linear(in_features=4, out_features=128, bias=True)
+    (gnn): GraphSAGE(
+      (convs): ModuleList(
+        (0): GraphSAGEConv(
+          (lin): Linear(in_features=512, out_features=128, bias=True)
+        )
+        (1-2): 2 x GraphSAGEConv(
+          (lin): Linear(in_features=256, out_features=128, bias=True)
+        )
+      )
+      (bns): ModuleList(
+        (0-2): 3 x BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (reward_head): Sequential(
+      (0): Linear(in_features=384, out_features=128, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=128, out_features=64, bias=True)
+      (3): ReLU()
+      (4): Linear(in_features=64, out_features=601, bias=True)
+    )
+  )
+  (afterstate_dynamics_network): GNNDynamicsNetwork(
+    (action_encoder): Linear(in_features=32, out_features=128, bias=True)
+    (gnn): GraphSAGE(
+      (convs): ModuleList(
+        (0): GraphSAGEConv(
+          (lin): Linear(in_features=512, out_features=128, bias=True)
+        )
+        (1-2): 2 x GraphSAGEConv(
+          (lin): Linear(in_features=256, out_features=128, bias=True)
+        )
+      )
+      (bns): ModuleList(
+        (0-2): 3 x BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (reward_head): Sequential(
+      (0): Linear(in_features=384, out_features=128, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=128, out_features=64, bias=True)
+      (3): ReLU()
+      (4): Linear(in_features=64, out_features=601, bias=True)
+    )
+  )
+  (afterstate_prediction_network): GNNPredictionNetwork(
+    (value_head): GNNValueHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=64, out_features=601, bias=True)
+      )
+    )
+    (policy_head): GNNPolicyHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=64, out_features=32, bias=True)
+      )
+    )
+  )
+  (chance_encoder): ChanceEncoder(
+    (encoder): ChanceEncoderBackbone(
+      (conv1): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (conv2): Conv2d(32, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (fc1): Linear(in_features=1024, out_features=128, bias=True)
+      (fc2): Linear(in_features=128, out_features=64, bias=True)
+      (fc3): Linear(in_features=64, out_features=32, bias=True)
+    )
+    (onehot_argmax): StraightThroughEstimator()
+  )
+)
+[2025-10-07 01:15:09][base_learner.py:360][INFO] [RANK0]: learner save ckpt in ./data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_seed0/ckpt/ckpt_best.pth.tar
+[2025-10-07 01:15:24][base_learner.py:360][INFO] [RANK0]: === Training Iteration 0 Result ===
+[2025-10-07 01:15:24][learner_hook.py:228][INFO] 
++-------+------------------------------+------------+-------------------------+----------------+
+| Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |
++-------+------------------------------+------------+-------------------------+----------------+
+| Value | 1.000000                     | 0.003000   | 26.273268               | 31.913857      |
++-------+------------------------------+------------+-------------------------+----------------+
++-------+-----------------+-----------------+----------------+----------------------+
+| Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |
++-------+-----------------+-----------------+----------------+----------------------+
+| Value | 4.158883        | 12.797190       | 19.195786      | -0.012368            |
++-------+-----------------+-----------------+----------------+----------------------+
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Value | 6.931472                   | 12.797190                 | 0.077541            | 65.716225          |
++-------+----------------------------+---------------------------+---------------------+--------------------+
++-------+-------------------+------------------+-----------------------+----------------------+
+| Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |
++-------+-------------------+------------------+-----------------------+----------------------+
+| Value | 6.750000          | 64.522598        | -0.000006             | -0.000006            |
++-------+-------------------+------------------+-----------------------+----------------------+
++-------+-------------------------------+------------------------------+---------------------------------+
+| Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |
++-------+-------------------------------+------------------------------+---------------------------------+
+| Value | 1.334085                      | 6.622152                     | 4.326857                        |
++-------+-------------------------------+------------------------------+---------------------------------+
+
+[2025-10-07 01:15:24][base_learner.py:360][INFO] [RANK0]: learner save ckpt in ./data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_seed0/ckpt/iteration_0.pth.tar
+[2025-10-07 01:16:12][base_learner.py:360][INFO] [RANK0]: === Training Iteration 100 Result ===
+[2025-10-07 01:16:12][learner_hook.py:228][INFO] 
++-------+------------------------------+------------+-------------------------+----------------+
+| Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |
++-------+------------------------------+------------+-------------------------+----------------+
+| Value | 1.000000                     | 0.003000   | 3.707007                | 8.502031       |
++-------+------------------------------+------------+-------------------------+----------------+
++-------+-----------------+-----------------+----------------+----------------------+
+| Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |
++-------+-----------------+-----------------+----------------+----------------------+
+| Value | 4.125371        | 1.859802        | 6.005377       | -0.322581            |
++-------+-----------------+-----------------+----------------+----------------------+
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Value | 1.289424                   | 3.948445                  | 0.029304            | 28.379018          |
++-------+----------------------------+---------------------------+---------------------+--------------------+
++-------+-------------------+------------------+-----------------------+----------------------+
+| Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |
++-------+-------------------+------------------+-----------------------+----------------------+
+| Value | 8.439394          | 80.789943        | 6.770574              | 67.692548            |
++-------+-------------------+------------------+-----------------------+----------------------+
++-------+-------------------------------+------------------------------+---------------------------------+
+| Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |
++-------+-------------------------------+------------------------------+---------------------------------+
+| Value | 1.578192                      | 7.434322                     | 4.433188                        |
++-------+-------------------------------+------------------------------+---------------------------------+
+
+[2025-10-07 01:16:59][base_learner.py:360][INFO] [RANK0]: learner save ckpt in ./data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_seed0/ckpt/iteration_200.pth.tar

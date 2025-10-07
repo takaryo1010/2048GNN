@@ -97,10 +97,10 @@ def prepare_observation(observation_list, model_type='conv'):
     Returns:
         - np.ndarray: Reshaped array of observations.
     """
-    assert model_type in ['conv', 'mlp', 'conv_context', 'mlp_context', 'gat'], "model_type must be 'conv', 'mlp', 'conv_context', 'mlp_context', or 'gat'"
+    assert model_type in ['conv', 'mlp', 'conv_context', 'mlp_context', 'gat', 'gnn'], "model_type must be 'conv', 'mlp', 'conv_context', 'mlp_context', 'gat', or 'gnn'"
     
-    # Special handling for GAT model if observation shapes are inconsistent
-    if model_type == 'gat':
+    # Special handling for GAT and GNN models if observation shapes are inconsistent
+    if model_type in ['gat', 'gnn']:
         try:
             observation_array = np.array(observation_list)
         except ValueError as e:
@@ -146,7 +146,7 @@ def prepare_observation(observation_list, model_type='conv'):
                             final_obs.append(np.zeros(target_shape))
                 observation_array = np.array(final_obs)
         
-        # Ensure float32 type for GAT compatibility
+        # Ensure float32 type for GAT/GNN compatibility
         observation_array = observation_array.astype(np.float32)
     else:
         observation_array = np.array(observation_list)
@@ -155,7 +155,7 @@ def prepare_observation(observation_list, model_type='conv'):
     
     batch_size = observation_array.shape[0]
 
-    if model_type in ['conv', 'conv_context', 'gat']:  # GAT uses similar format as conv
+    if model_type in ['conv', 'conv_context', 'gat', 'gnn']:  # GAT and GNN use similar format as conv
         if observation_array.ndim == 3:
             # Add a channel dimension if it's missing
             observation_array = observation_array[..., np.newaxis]

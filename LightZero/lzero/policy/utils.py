@@ -395,8 +395,8 @@ def prepare_obs(obs_batch_ori: np.ndarray, cfg: EasyDict) -> Tuple[torch.Tensor,
     # Calculate the dimension size to slice based on the model configuration.
     # For convolutional models ('conv'), use the number of frames to stack times the number of channels.
     # For multi-layer perceptron models ('mlp'), use the number of frames to stack times the size of the observation space.
-    # For GAT models ('gat'), treat them like conv models
-    if cfg.model.model_type in ['conv', 'conv_context', 'gat']:
+    # For GAT and GNN models, treat them like conv models
+    if cfg.model.model_type in ['conv', 'conv_context', 'gat', 'gnn']:
         stack_dim = cfg.model.frame_stack_num * cfg.model.image_channel
     else:
         # For mlp models
@@ -410,9 +410,9 @@ def prepare_obs(obs_batch_ori: np.ndarray, cfg: EasyDict) -> Tuple[torch.Tensor,
     # If the model configuration specifies the use of self-supervised learning loss, prepare the target batch for the consistency loss.
     if cfg.model.self_supervised_learning_loss:
         # Determine the starting dimension to exclude based on the model type.
-        # For 'conv' and 'gat', exclude the first 'image_channel' dimensions.
+        # For 'conv', 'gat', and 'gnn', exclude the first 'image_channel' dimensions.
         # For 'mlp', exclude the first 'observation_shape' dimensions.
-        if cfg.model.model_type in ['conv', 'conv_context', 'gat']:
+        if cfg.model.model_type in ['conv', 'conv_context', 'gat', 'gnn']:
             exclude_dim = cfg.model.image_channel
         else:
             exclude_dim = cfg.model.observation_shape

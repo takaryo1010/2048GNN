@@ -29,8 +29,8 @@ class StochasticMuZeroPolicy(MuZeroPolicy):
     # The default_config for Stochastic MuZero policy.
     config = dict(
         model=dict(
-            # (str) The model type. For 1-dimensional vector obs, we use mlp model. For the image obs, we use conv model.
-            model_type='conv',  # options={'mlp', 'conv'}
+            # (str) The model type. For 1-dimensional vector obs, we use mlp model. For the image obs, we use conv model. For graph-based, use gnn.
+            model_type='conv',  # options={'mlp', 'conv', 'gnn'}
             # (bool) If True, the action space of the environment is continuous, otherwise discrete.
             continuous_action_space=False,
             # (tuple) The stacked obs shape.
@@ -218,6 +218,8 @@ class StochasticMuZeroPolicy(MuZeroPolicy):
             return 'StochasticMuZeroModel', ['lzero.model.stochastic_muzero_model']
         elif self._cfg.model.model_type == "mlp":
             return 'StochasticMuZeroModelMLP', ['lzero.model.stochastic_muzero_model_mlp']
+        elif self._cfg.model.model_type == "gnn":
+            return 'GNNStochasticMuZeroModel', ['lzero.model.gnn_stochastic_muzero_model']
         else:
             raise ValueError("model type {} is not supported".format(self._cfg.model.model_type))
 

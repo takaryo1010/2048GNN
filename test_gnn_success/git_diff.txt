@@ -1,0 +1,59 @@
+diff --git a/LightZero/lzero/mcts/utils.py b/LightZero/lzero/mcts/utils.py
+index 6599973..a5687d7 100644
+--- a/LightZero/lzero/mcts/utils.py
++++ b/LightZero/lzero/mcts/utils.py
+@@ -97,10 +97,10 @@ def prepare_observation(observation_list, model_type='conv'):
+     Returns:
+         - np.ndarray: Reshaped array of observations.
+     """
+-    assert model_type in ['conv', 'mlp', 'conv_context', 'mlp_context', 'gat'], "model_type must be 'conv', 'mlp', 'conv_context', 'mlp_context', or 'gat'"
++    assert model_type in ['conv', 'mlp', 'conv_context', 'mlp_context', 'gat', 'gnn'], "model_type must be 'conv', 'mlp', 'conv_context', 'mlp_context', 'gat', or 'gnn'"
+     
+-    # Special handling for GAT model if observation shapes are inconsistent
+-    if model_type == 'gat':
++    # Special handling for GAT and GNN models if observation shapes are inconsistent
++    if model_type in ['gat', 'gnn']:
+         try:
+             observation_array = np.array(observation_list)
+         except ValueError as e:
+@@ -146,7 +146,7 @@ def prepare_observation(observation_list, model_type='conv'):
+                             final_obs.append(np.zeros(target_shape))
+                 observation_array = np.array(final_obs)
+         
+-        # Ensure float32 type for GAT compatibility
++        # Ensure float32 type for GAT/GNN compatibility
+         observation_array = observation_array.astype(np.float32)
+     else:
+         observation_array = np.array(observation_list)
+@@ -155,7 +155,7 @@ def prepare_observation(observation_list, model_type='conv'):
+     
+     batch_size = observation_array.shape[0]
+ 
+-    if model_type in ['conv', 'conv_context', 'gat']:  # GAT uses similar format as conv
++    if model_type in ['conv', 'conv_context', 'gat', 'gnn']:  # GAT and GNN use similar format as conv
+         if observation_array.ndim == 3:
+             # Add a channel dimension if it's missing
+             observation_array = observation_array[..., np.newaxis]
+diff --git a/LightZero/lzero/policy/stochastic_muzero.py b/LightZero/lzero/policy/stochastic_muzero.py
+index 3a206a2..1707781 100644
+--- a/LightZero/lzero/policy/stochastic_muzero.py
++++ b/LightZero/lzero/policy/stochastic_muzero.py
+@@ -29,8 +29,8 @@ class StochasticMuZeroPolicy(MuZeroPolicy):
+     # The default_config for Stochastic MuZero policy.
+     config = dict(
+         model=dict(
+-            # (str) The model type. For 1-dimensional vector obs, we use mlp model. For the image obs, we use conv model.
+-            model_type='conv',  # options={'mlp', 'conv'}
++            # (str) The model type. For 1-dimensional vector obs, we use mlp model. For the image obs, we use conv model. For graph-based, use gnn.
++            model_type='conv',  # options={'mlp', 'conv', 'gnn'}
+             # (bool) If True, the action space of the environment is continuous, otherwise discrete.
+             continuous_action_space=False,
+             # (tuple) The stacked obs shape.
+@@ -218,6 +218,8 @@ class StochasticMuZeroPolicy(MuZeroPolicy):
+             return 'StochasticMuZeroModel', ['lzero.model.stochastic_muzero_model']
+         elif self._cfg.model.model_type == "mlp":
+             return 'StochasticMuZeroModelMLP', ['lzero.model.stochastic_muzero_model_mlp']
++        elif self._cfg.model.model_type == "gnn":
++            return 'GNNStochasticMuZeroModel', ['lzero.model.gnn_stochastic_muzero_model']
+         else:
+             raise ValueError("model type {} is not supported".format(self._cfg.model.model_type))
