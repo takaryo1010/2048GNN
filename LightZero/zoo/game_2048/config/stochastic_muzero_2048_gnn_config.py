@@ -68,9 +68,7 @@ game_2048_gnn_stochastic_muzero_config = dict(
             value_head_hidden_channels=[128, 64],
             policy_head_hidden_channels=[128, 64],
             reward_head_hidden_channels=[128, 64],
-            # Support sizes
-            reward_support_size=601,
-            value_support_size=601,
+            # Support sizes are using default values (same as original CNN config)
             categorical_distribution=True,
             # SSL (optional, set to False for now)
             self_supervised_learning_loss=True,
