@@ -1,0 +1,10 @@
+[2025-10-08 14:47:24][muzero_evaluator.py:390][INFO] [EVALUATOR]env 3 finish episode, final reward: 1688.0, current episode: 1
+[2025-10-08 14:49:52][muzero_evaluator.py:390][INFO] [EVALUATOR]env 3 finish episode, final reward: 1032.0, current episode: 1
+[2025-10-08 14:49:52][muzero_evaluator.py:404][INFO] The current init_obs.keys() is dict_keys([0, 1, 2, 4, 5, 6, 7])
+[2025-10-08 14:49:52][muzero_evaluator.py:405][INFO] Before sleeping, the _env_states is {0: <EnvState.RUN: 2>, 1: <EnvState.RUN: 2>, 2: <EnvState.RUN: 2>, 3: <EnvState.RUN: 2>, 4: <EnvState.RUN: 2>, 5: <EnvState.RUN: 2>, 6: <EnvState.RUN: 2>, 7: <EnvState.RUN: 2>}
+[2025-10-08 14:49:52][muzero_evaluator.py:409][INFO] ==========Wait for all environments (subprocess) to finish resetting.==========
+[2025-10-08 14:49:52][muzero_evaluator.py:412][INFO] After sleeping 0.001s, the current _env_states is {0: <EnvState.RUN: 2>, 1: <EnvState.RUN: 2>, 2: <EnvState.RUN: 2>, 3: <EnvState.RUN: 2>, 4: <EnvState.RUN: 2>, 5: <EnvState.RUN: 2>, 6: <EnvState.RUN: 2>, 7: <EnvState.RUN: 2>}
+[2025-10-08 14:51:42][muzero_evaluator.py:390][INFO] [EVALUATOR]env 3 finish episode, final reward: 888.0, current episode: 1
+[2025-10-08 14:54:25][muzero_evaluator.py:390][INFO] [EVALUATOR]env 0 finish episode, final reward: 1180.0, current episode: 1
+[2025-10-08 14:57:07][muzero_evaluator.py:390][INFO] [EVALUATOR]env 0 finish episode, final reward: 1512.0, current episode: 1
+[2025-10-08 14:59:33][muzero_evaluator.py:390][INFO] [EVALUATOR]env 3 finish episode, final reward: 1380.0, current episode: 1
