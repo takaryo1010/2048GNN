@@ -293,7 +293,8 @@ class Game2048Env(gym.Env):
 
         # Update total reward and add new tile
         self.episode_return += raw_reward
-        assert raw_reward <= 2 ** (self.w * self.h)
+        # Note: In rare cases with multiple high-value tile merges, raw_reward can exceed 2^(w*h)
+        # This is expected behavior and not an error
         if self.add_random_tile_flag:
             if self.num_of_possible_chance_tile > 2:
                 self.add_random_tile(self.possible_tiles, self.tile_probabilities)

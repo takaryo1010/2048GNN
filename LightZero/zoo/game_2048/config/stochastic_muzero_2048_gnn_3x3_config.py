@@ -59,8 +59,8 @@ edge_mode = 'adjacent'  # 推奨: 3x3では'adjacent'で十分（小さいグリ
 
 # メイン設定辞書
 game_2048_gnn_stochastic_muzero_config = dict(
-    # 実験名: データ保存先のパスとして使用
-    exp_name=f'data_gnn_stochastic_mz_3x3/game_2048_gnn_3x3_npct-{num_of_possible_chance_tile}_ns{num_simulations}_upc{update_per_collect}_rer{reanalyze_ratio}_bs{batch_size}_gnn{num_gnn_layers}L{gnn_hidden_dim}D_{edge_mode}_seed0',
+    # 実験名: データ保存先のパスとして使用（続きの学習セッション）
+    exp_name=f'data_gnn_stochastic_mz_3x3/game_2048_gnn_3x3_npct-{num_of_possible_chance_tile}_ns{num_simulations}_upc{update_per_collect}_rer{reanalyze_ratio}_bs{batch_size}_gnn{num_gnn_layers}L{gnn_hidden_dim}D_{edge_mode}_seed0_resume',
     
     # 環境設定
     env=dict(
@@ -100,8 +100,8 @@ game_2048_gnn_stochastic_muzero_config = dict(
             reward_head_hidden_channels=[128, 64],  # 報酬ヘッド: 報酬を予測（128→64層）
             
             # サポートサイズ（Categorical Distributionのためのビン数）
-            reward_support_size=601,  # 報酬サポートサイズ: -300〜+300の範囲を601個に離散化
-            value_support_size=601,  # 価値サポートサイズ: 同様に離散化
+            # reward_support_size=601,  # 報酬サポートサイズ: -300〜+300の範囲を601個に離散化
+            # value_support_size=601,  # 価値サポートサイズ: 同様に離散化
             categorical_distribution=True,  # カテゴリカル分布: 期待値だけでなく分布全体を学習
             
             # SSL（Self-Supervised Learning: 自己教師あり学習）設定
@@ -115,7 +115,7 @@ game_2048_gnn_stochastic_muzero_config = dict(
             last_linear_layer_init_zero=True,  # 最終線形層をゼロ初期化: 学習初期の安定化
         ),
         # 事前学習済みモデルのパス
-        model_path=None,  # Noneの場合はランダム初期化
+        model_path='./data_gnn_stochastic_mz_3x3/game_2048_gnn_3x3_npct-2_ns50_upc100_rer0.0_bs256_gnn2L96D_adjacent_seed0_251008_134827/ckpt/ckpt_best.pth.tar',  # 学習再開: bestチェックポイントから
         use_ture_chance_label_in_chance_encoder=use_ture_chance_label_in_chance_encoder,  # チャンスエンコーダで真のラベルを使用
         cuda=True,  # GPU使用: CUDAを有効化
         env_type='not_board_games',  # 環境タイプ: ボードゲーム以外
