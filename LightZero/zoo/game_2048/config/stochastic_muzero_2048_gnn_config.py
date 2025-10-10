@@ -32,6 +32,10 @@ gnn_dropout = 0.0
 # - 'sparse': ~88 edges, balanced (4-neighbors + distance-2)
 # - 'full': ~200 edges, slowest (all pairs in row/col)
 edge_mode = 'sparse'  # Recommended: 'sparse' for best speed/accuracy tradeoff
+
+# Note: All networks including Chance Encoder now use GNN!
+# This enables full transfer learning capability (e.g., 3x3 → 4x4)
+# Previous CNN-based Chance Encoder had fixed input dimensions and couldn't transfer.
 # ==============================================================
 # End of GNN-specific config
 # ==============================================================
@@ -82,7 +86,7 @@ game_2048_gnn_stochastic_muzero_config = dict(
             last_linear_layer_init_zero=True,
         ),
         # Model path for pretrained weights
-        model_path='./data_gnn_stochastic_mz/gnn_simple_success1/ckpt/iteration_79400.pth.tar',
+        model_path=None,
         use_ture_chance_label_in_chance_encoder=use_ture_chance_label_in_chance_encoder,
         cuda=True,
         game_segment_length=200,

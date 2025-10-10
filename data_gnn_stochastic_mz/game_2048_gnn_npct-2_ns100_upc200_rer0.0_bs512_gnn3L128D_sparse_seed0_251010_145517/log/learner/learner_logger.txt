@@ -1,0 +1,241 @@
+[2025-10-10 14:55:37][base_learner.py:360][INFO] [RANK0]: DI-engine DRL Policy
+GNNStochasticMuZeroModel(
+  (representation_network): GNNRepresentationNetwork(
+    (gnn): GraphSAGE(
+      (convs): ModuleList(
+        (0): GraphSAGEConv(
+          (lin): Linear(in_features=36, out_features=128, bias=True)
+        )
+        (1-2): 2 x GraphSAGEConv(
+          (lin): Linear(in_features=256, out_features=128, bias=True)
+        )
+      )
+      (norms): ModuleList(
+        (0-2): 3 x LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+  )
+  (prediction_network): GNNPredictionNetwork(
+    (value_head): GNNValueHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=64, out_features=601, bias=True)
+      )
+    )
+    (policy_head): GNNPolicyHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=64, out_features=4, bias=True)
+      )
+    )
+  )
+  (dynamics_network): GNNDynamicsNetwork(
+    (action_encoder): Linear(in_features=4, out_features=128, bias=True)
+    (gnn): GraphSAGE(
+      (convs): ModuleList(
+        (0): GraphSAGEConv(
+          (lin): Linear(in_features=512, out_features=128, bias=True)
+        )
+        (1-2): 2 x GraphSAGEConv(
+          (lin): Linear(in_features=256, out_features=128, bias=True)
+        )
+      )
+      (norms): ModuleList(
+        (0-2): 3 x LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+    (reward_head): Sequential(
+      (0): Linear(in_features=384, out_features=128, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=128, out_features=64, bias=True)
+      (3): ReLU()
+      (4): Linear(in_features=64, out_features=601, bias=True)
+    )
+  )
+  (afterstate_dynamics_network): GNNDynamicsNetwork(
+    (action_encoder): Linear(in_features=32, out_features=128, bias=True)
+    (gnn): GraphSAGE(
+      (convs): ModuleList(
+        (0): GraphSAGEConv(
+          (lin): Linear(in_features=512, out_features=128, bias=True)
+        )
+        (1-2): 2 x GraphSAGEConv(
+          (lin): Linear(in_features=256, out_features=128, bias=True)
+        )
+      )
+      (norms): ModuleList(
+        (0-2): 3 x LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+    (reward_head): Sequential(
+      (0): Linear(in_features=384, out_features=128, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=128, out_features=64, bias=True)
+      (3): ReLU()
+      (4): Linear(in_features=64, out_features=601, bias=True)
+    )
+  )
+  (afterstate_prediction_network): GNNPredictionNetwork(
+    (value_head): GNNValueHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=64, out_features=601, bias=True)
+      )
+    )
+    (policy_head): GNNPolicyHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=64, out_features=32, bias=True)
+      )
+    )
+  )
+  (chance_encoder): GNNChanceEncoder(
+    (gnn): GraphSAGE(
+      (convs): ModuleList(
+        (0): GraphSAGEConv(
+          (lin): Linear(in_features=68, out_features=128, bias=True)
+        )
+        (1): GraphSAGEConv(
+          (lin): Linear(in_features=256, out_features=128, bias=True)
+        )
+      )
+      (norms): ModuleList(
+        (0-1): 2 x LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+    (chance_head): Sequential(
+      (0): Linear(in_features=384, out_features=128, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=128, out_features=64, bias=True)
+      (3): ReLU()
+      (4): Linear(in_features=64, out_features=32, bias=True)
+    )
+    (onehot_argmax): StraightThroughEstimator()
+  )
+)
+[2025-10-10 14:56:06][base_learner.py:360][INFO] [RANK0]: learner save ckpt in ./data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251010_145517/ckpt/ckpt_best.pth.tar
+[2025-10-10 14:57:38][base_learner.py:360][INFO] [RANK0]: === Training Iteration 0 Result ===
+[2025-10-10 14:57:38][learner_hook.py:228][INFO] 
++-------+------------------------------+------------+-------------------------+----------------+
+| Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |
++-------+------------------------------+------------+-------------------------+----------------+
+| Value | 1.000000                     | 0.003000   | 68.312843               | 76.956711      |
++-------+------------------------------+------------+-------------------------+----------------+
++-------+-----------------+-----------------+----------------+----------------------+
+| Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |
++-------+-----------------+-----------------+----------------+----------------------+
+| Value | 7.998268        | 31.992973       | 38.391567      | -0.027080            |
++-------+-----------------+-----------------+----------------+----------------------+
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Value | 17.328680                  | 31.992973                 | 2.311452            | 67.093979          |
++-------+----------------------------+---------------------------+---------------------+--------------------+
++-------+-------------------+------------------+-----------------------+----------------------+
+| Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |
++-------+-------------------+------------------+-----------------------+----------------------+
+| Value | 6.833333          | 65.699249        | -0.000006             | -0.000006            |
++-------+-------------------+------------------+-----------------------+----------------------+
++-------+-------------------------------+------------------------------+---------------------------------+
+| Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |
++-------+-------------------------------+------------------------------+---------------------------------+
+| Value | 1.300366                      | 6.592053                     | 16.832750                       |
++-------+-------------------------------+------------------------------+---------------------------------+
+
+[2025-10-10 14:57:38][base_learner.py:360][INFO] [RANK0]: learner save ckpt in ./data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251010_145517/ckpt/iteration_0.pth.tar
+[2025-10-10 14:58:50][base_learner.py:360][INFO] [RANK0]: === Training Iteration 100 Result ===
+[2025-10-10 14:58:50][learner_hook.py:228][INFO] 
++-------+------------------------------+------------+-------------------------+----------------+
+| Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |
++-------+------------------------------+------------+-------------------------+----------------+
+| Value | 1.000000                     | 0.003000   | 9.205048                | 31.337452      |
++-------+------------------------------+------------+-------------------------+----------------+
++-------+-----------------+-----------------+----------------+----------------------+
+| Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |
++-------+-----------------+-----------------+----------------+----------------------+
+| Value | 8.133480        | 7.902780        | 15.390554      | -0.563999            |
++-------+-----------------+-----------------+----------------+----------------------+
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Value | 13.701478                  | 12.977205                 | 0.147760            | 38.248855          |
++-------+----------------------------+---------------------------+---------------------+--------------------+
++-------+-------------------+------------------+-----------------------+----------------------+
+| Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |
++-------+-------------------+------------------+-----------------------+----------------------+
+| Value | 7.151515          | 73.313650        | 4.286183              | 57.044744            |
++-------+-------------------+------------------+-----------------------+----------------------+
++-------+-------------------------------+------------------------------+---------------------------------+
+| Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |
++-------+-------------------------------+------------------------------+---------------------------------+
+| Value | 1.346796                      | 7.063114                     | 1.032692                        |
++-------+-------------------------------+------------------------------+---------------------------------+
+
+[2025-10-10 15:01:36][base_learner.py:360][INFO] [RANK0]: === Training Iteration 200 Result ===
+[2025-10-10 15:01:36][learner_hook.py:228][INFO] 
++-------+------------------------------+------------+-------------------------+----------------+
+| Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |
++-------+------------------------------+------------+-------------------------+----------------+
+| Value | 1.000000                     | 0.003000   | 6.636394                | 28.487376      |
++-------+------------------------------+------------+-------------------------+----------------+
++-------+-----------------+-----------------+----------------+----------------------+
+| Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |
++-------+-----------------+-----------------+----------------+----------------------+
+| Value | 8.093766        | 7.817958        | 13.789357      | -0.682537            |
++-------+-----------------+-----------------+----------------+----------------------+
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Value | 12.976407                  | 11.318057                 | 0.147759            | 44.166780          |
++-------+----------------------------+---------------------------+---------------------+--------------------+
++-------+-------------------+------------------+-----------------------+----------------------+
+| Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |
++-------+-------------------+------------------+-----------------------+----------------------+
+| Value | 7.276279          | 118.128516       | 4.472306              | 98.896502            |
++-------+-------------------+------------------+-----------------------+----------------------+
++-------+-------------------------------+------------------------------+---------------------------------+
+| Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |
++-------+-------------------------------+------------------------------+---------------------------------+
+| Value | 1.357504                      | 9.323949                     | 0.840918                        |
++-------+-------------------------------+------------------------------+---------------------------------+
+
+[2025-10-10 15:02:46][base_learner.py:360][INFO] [RANK0]: === Training Iteration 300 Result ===
+[2025-10-10 15:02:46][learner_hook.py:228][INFO] 
++-------+------------------------------+------------+-------------------------+----------------+
+| Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |
++-------+------------------------------+------------+-------------------------+----------------+
+| Value | 1.000000                     | 0.003000   | 9.023661                | 30.110779      |
++-------+------------------------------+------------+-------------------------+----------------+
++-------+-----------------+-----------------+----------------+----------------------+
+| Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |
++-------+-----------------+-----------------+----------------+----------------------+
+| Value | 7.882686        | 8.098656        | 14.927174      | -0.552568            |
++-------+-----------------+-----------------+----------------+----------------------+
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Value | 12.705582                  | 12.279827                 | 0.147788            | 75.986490          |
++-------+----------------------------+---------------------------+---------------------+--------------------+
++-------+-------------------+------------------+-----------------------+----------------------+
+| Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |
++-------+-------------------+------------------+-----------------------+----------------------+
+| Value | 8.284801          | 151.735750       | 4.863520              | 124.316384           |
++-------+-------------------+------------------+-----------------------+----------------------+
++-------+-------------------------------+------------------------------+---------------------------------+
+| Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |
++-------+-------------------------------+------------------------------+---------------------------------+
+| Value | 1.465393                      | 10.431595                    | 0.958861                        |
++-------+-------------------------------+------------------------------+---------------------------------+
+
