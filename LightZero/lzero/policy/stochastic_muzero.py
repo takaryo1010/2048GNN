@@ -230,6 +230,9 @@ class StochasticMuZeroPolicy(MuZeroPolicy):
         elif self._cfg.model.model_type == "gnn":
             # GNN 用の実装: lzero.model.gnn_stochastic_muzero_model の中の GNNStochasticMuZeroModel が使われる
             return 'GNNStochasticMuZeroModel', ['lzero.model.gnn_stochastic_muzero_model']
+        elif self._cfg.model.model_type == "gnn_optimized":
+            # GNN 最適化版: ノード表現 [B, N, C] で統一した高速版
+            return 'GNNStochasticMuZeroModelOptimized', ['lzero.model.gnn_stochastic_muzero_model_optimized']
         else:
             raise ValueError("model type {} is not supported".format(self._cfg.model.model_type))
 

@@ -97,10 +97,10 @@ def prepare_observation(observation_list, model_type='conv'):
     Returns:
         - np.ndarray: Reshaped array of observations.
     """
-    assert model_type in ['conv', 'mlp', 'conv_context', 'mlp_context', 'gat', 'gnn'], "model_type must be 'conv', 'mlp', 'conv_context', 'mlp_context', 'gat', or 'gnn'"
+    assert model_type in ['conv', 'mlp', 'conv_context', 'mlp_context', 'gat', 'gnn', 'gnn_optimized'], "model_type must be 'conv', 'mlp', 'conv_context', 'mlp_context', 'gat', 'gnn', or 'gnn_optimized'"
     
-    # Special handling for GAT and GNN models if observation shapes are inconsistent
-    if model_type in ['gat', 'gnn']:
+    # Special handling for GAT, GNN, and GNN_optimized models if observation shapes are inconsistent
+    if model_type in ['gat', 'gnn', 'gnn_optimized']:
         try:
             observation_array = np.array(observation_list)
         except ValueError as e:
@@ -155,7 +155,7 @@ def prepare_observation(observation_list, model_type='conv'):
     
     batch_size = observation_array.shape[0]
 
-    if model_type in ['conv', 'conv_context', 'gat', 'gnn']:  # GAT and GNN use similar format as conv
+    if model_type in ['conv', 'conv_context', 'gat', 'gnn', 'gnn_optimized']:  # GAT, GNN, and GNN_optimized use similar format as conv
         if observation_array.ndim == 3:
             # Add a channel dimension if it's missing
             observation_array = observation_array[..., np.newaxis]
