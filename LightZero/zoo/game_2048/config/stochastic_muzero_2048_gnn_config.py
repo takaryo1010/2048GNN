@@ -17,7 +17,7 @@ evaluator_env_num = 3
 num_simulations = 100
 update_per_collect = 200
 batch_size = 512
-max_env_step = int(1e6)
+max_env_step = int(1e8)  # 100 million steps (increased from 1e6)
 reanalyze_ratio = 0.0
 num_of_possible_chance_tile = 2
 chance_space_size = 16 * num_of_possible_chance_tile
@@ -39,7 +39,7 @@ edge_mode = 'sparse'  # Recommended: 'sparse' for best speed/accuracy tradeoff
 game_2048_gnn_stochastic_muzero_config = dict(
     exp_name=f'data_gnn_stochastic_mz/game_2048_gnn_npct-{num_of_possible_chance_tile}_ns{num_simulations}_upc{update_per_collect}_rer{reanalyze_ratio}_bs{batch_size}_gnn{num_gnn_layers}L{gnn_hidden_dim}D_{edge_mode}_seed0',
     env=dict(
-        stop_value=int(1e6),
+        stop_value=int(1e8),  # Increased from 1e6
         env_id=env_id,
         obs_shape=(16, 4, 4),
         obs_type='dict_encoded_board',
@@ -82,7 +82,7 @@ game_2048_gnn_stochastic_muzero_config = dict(
             last_linear_layer_init_zero=True,
         ),
         # Model path for pretrained weights
-        model_path=None,
+        model_path='./data_gnn_stochastic_mz/gnn_simple_success1/ckpt/iteration_79400.pth.tar',
         use_ture_chance_label_in_chance_encoder=use_ture_chance_label_in_chance_encoder,
         cuda=True,
         game_segment_length=200,
