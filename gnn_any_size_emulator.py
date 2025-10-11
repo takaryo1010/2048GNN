@@ -229,10 +229,12 @@ class Game2048AnySize:
         
         for action in range(4):
             old_board = self.board.copy()
+            old_score = self.score  # スコアも保存
             self._move(action)
             if not np.array_equal(old_board, self.board):
                 legal_actions.append(action)
             self.board = old_board
+            self.score = old_score  # スコアを復元
         
         return legal_actions
 
@@ -964,6 +966,11 @@ def evaluate_agent(
         print(f"  スコア: {info['score']}")
         print(f"  最大タイル: {info['max_tile']}")
         print(f"  手数: {info['moves']}")
+        
+        # 16または32で止まった場合は最終盤面を表示
+        if info['max_tile'] in [16, 32]:
+            print(f"\n⚠️ 最大タイル{info['max_tile']}で終了 - 最終盤面:")
+            render_board(env.board, info['score'], info['moves'], info['max_tile'])
         
         # GIFを保存
         if save_gif and gif_path and len(episode_frames) > 0:
