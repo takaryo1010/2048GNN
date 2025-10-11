@@ -136,6 +136,9 @@ class OptimizedGNNRepresentationNetwork(nn.Module):
             dropout=dropout,
             use_bn=True
         )
+        
+        # 簡易ログ用のカウンタ（初回のみログ出力）
+        self._forward_count = 0
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -145,11 +148,23 @@ class OptimizedGNNRepresentationNetwork(nn.Module):
         Returns:
             latent_state: [B, N, num_channels] - NODE FORMAT (optimized!)
         """
+        # 初回のみログ出力
+        if self._forward_count == 0:
+            print(f"[RepresentationNet] Input shape: {x.shape}")
+        
         # Convert to graph
         node_features, edge_index = self.graph_builder.obs_to_graph(x)
         
+        if self._forward_count == 0:
+            print(f"[RepresentationNet] Graph conversion: node_features={node_features.shape}, edge_index={edge_index.shape}")
+
         # Apply GNN
         node_embeddings = self.gnn(node_features, edge_index)
+        
+        if self._forward_count == 0:
+            print(f"[RepresentationNet] GNN output: {node_embeddings.shape}")
+            print(f"[RepresentationNet] Node embeddings stats: min={node_embeddings.min().item():.4f}, max={node_embeddings.max().item():.4f}, mean={node_embeddings.mean().item():.4f}")
+            self._forward_count += 1
         
         # Return node representation directly (NO reshape to CNN format!)
         return node_embeddings  # [B, N, C]
@@ -322,6 +337,9 @@ class OptimizedGNNDynamicsNetwork(nn.Module):
         
         self.graph_builder = GraphBuilder(grid_size, include_row_col_edges, edge_mode)
         
+        # 簡易ログ用のカウンタ
+        self._forward_count = 0
+        
         self.action_encoder = nn.Linear(action_space_size, num_channels)
         
         self.gnn = GraphSAGE(
@@ -357,6 +375,9 @@ class OptimizedGNNDynamicsNetwork(nn.Module):
             next_node_embeddings: [B, N, C] - NODE FORMAT
             reward: [B, reward_support_size]
         """
+        if self._forward_count == 0:
+            print(f"[DynamicsNet] Input: node_embeddings={node_embeddings.shape}, action={action.shape}")
+        
         batch_size = node_embeddings.size(0)
         
         # Handle action encoding
@@ -372,6 +393,9 @@ class OptimizedGNNDynamicsNetwork(nn.Module):
         action_emb = self.action_encoder(action)  # [B, C]
         action_emb = action_emb.unsqueeze(1).expand(-1, self.num_nodes, -1)  # [B, N, C]
         
+        if self._forward_count == 0:
+            print(f"[DynamicsNet] Action encoded: {action_emb.shape}")
+        
         # Concatenate state and action (NO reshape needed!)
         node_features = torch.cat([node_embeddings, action_emb], dim=-1)  # [B, N, 2*C]
         
@@ -381,12 +405,19 @@ class OptimizedGNNDynamicsNetwork(nn.Module):
         # Apply GNN
         next_node_embeddings = self.gnn(node_features, edge_index)  # [B, N, C]
         
+        if self._forward_count == 0:
+            print(f"[DynamicsNet] GNN output: {next_node_embeddings.shape}")
+        
         # Predict reward
         mean_pool = next_node_embeddings.mean(dim=1)
         max_pool = next_node_embeddings.max(dim=1)[0]
         sum_pool = next_node_embeddings.sum(dim=1)
         aggregated = torch.cat([mean_pool, max_pool, sum_pool], dim=-1)
         reward = self.reward_head(aggregated)
+        
+        if self._forward_count == 0:
+            print(f"[DynamicsNet] Reward output: {reward.shape}")
+            self._forward_count += 1
         
         return next_node_embeddings, reward
 
@@ -528,9 +559,27 @@ class GNNStochasticMuZeroModelOptimized(nn.Module):
         Returns:
             MZNetworkOutput with latent_state in NODE FORMAT [B, N, C]
         """
+        if not hasattr(self, '_initial_inference_count'):
+            self._initial_inference_count = 0
+        
+        if self._initial_inference_count == 0:
+            print(f"\n{'='*60}")
+            print(f"[InitialInference] Starting initial inference")
+            print(f"[InitialInference] Input obs shape: {obs.shape}")
+            print(f"{'='*60}\n")
+        
         batch_size = obs.size(0)
         latent_state = self._representation(obs)  # [B, N, C]
+        
+        if self._initial_inference_count == 0:
+            print(f"[InitialInference] Latent state shape: {latent_state.shape}")
+        
         policy_logits, value = self._prediction(latent_state)
+        
+        if self._initial_inference_count == 0:
+            print(f"[InitialInference] Policy logits shape: {policy_logits.shape}")
+            print(f"[InitialInference] Value shape: {value.shape}")
+            self._initial_inference_count += 1
         
         return MZNetworkOutput(
             value=value,
