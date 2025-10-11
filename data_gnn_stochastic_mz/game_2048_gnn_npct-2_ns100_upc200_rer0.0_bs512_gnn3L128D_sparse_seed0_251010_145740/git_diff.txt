@@ -1,0 +1,22 @@
+diff --git a/LightZero/lzero/model/__init__.py b/LightZero/lzero/model/__init__.py
+index e381ba6..d0fd2de 100644
+--- a/LightZero/lzero/model/__init__.py
++++ b/LightZero/lzero/model/__init__.py
+@@ -3,3 +3,4 @@ from .utils import *
+ from .common import *
+ from .gat_muzero_model import GATMuZeroModel
+ from .gat_stochastic_muzero_model import GATStochasticMuZeroModel
++from .gnn_stochastic_muzero_model import GNNStochasticMuZeroModel
+diff --git a/gnn_any_size_emulator.py b/gnn_any_size_emulator.py
+index f2f330a..06d1d6f 100644
+--- a/gnn_any_size_emulator.py
++++ b/gnn_any_size_emulator.py
+@@ -1041,7 +1041,7 @@ def main():
+     parser.add_argument('--episodes', type=int, default=10,
+                        help='実行するエピソード数 (デフォルト: 10)')
+     parser.add_argument('--model-path', type=str,
+-                       default='./LightZero/zoo/game_2048/config/data_gnn_stochastic_mz/gnn_simple_success/ckpt/iteration_79400.pth.tar',
++                       default='/opendilab/2048GNN/LightZero/zoo/game_2048/config/data_gnn_stochastic_mz/gnn_simple_success1/ckpt/iteration_79400.pth.tar',
+                        help='学習済みモデルのパス')
+     parser.add_argument('--render', action='store_true',
+                        help='リアルタイムで盤面を表示')

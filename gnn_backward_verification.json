@@ -1,0 +1,194 @@
+{
+  "timestamp": "2025-10-10T14:54:34.719341",
+  "test_results": {
+    "test1": {
+      "status": "PASSED",
+      "gnn_params_total": 52,
+      "gnn_params_with_grad": 12,
+      "conv_params_total": 0,
+      "conv_params_with_grad": 0,
+      "gnn_gradients": [
+        {
+          "name": "representation_network.gnn.convs.0.lin.weight",
+          "grad_norm": 0.0,
+          "grad_mean": 0.0,
+          "grad_max": 0.0,
+          "param_shape": [
+            128,
+            36
+          ]
+        },
+        {
+          "name": "representation_network.gnn.convs.0.lin.bias",
+          "grad_norm": 0.0,
+          "grad_mean": 0.0,
+          "grad_max": 0.0,
+          "param_shape": [
+            128
+          ]
+        },
+        {
+          "name": "representation_network.gnn.convs.1.lin.weight",
+          "grad_norm": 0.0,
+          "grad_mean": 0.0,
+          "grad_max": 0.0,
+          "param_shape": [
+            128,
+            256
+          ]
+        },
+        {
+          "name": "representation_network.gnn.convs.1.lin.bias",
+          "grad_norm": 0.0,
+          "grad_mean": 0.0,
+          "grad_max": 0.0,
+          "param_shape": [
+            128
+          ]
+        },
+        {
+          "name": "representation_network.gnn.convs.2.lin.weight",
+          "grad_norm": 0.0,
+          "grad_mean": 0.0,
+          "grad_max": 0.0,
+          "param_shape": [
+            128,
+            256
+          ]
+        },
+        {
+          "name": "representation_network.gnn.convs.2.lin.bias",
+          "grad_norm": 0.0,
+          "grad_mean": 0.0,
+          "grad_max": 0.0,
+          "param_shape": [
+            128
+          ]
+        },
+        {
+          "name": "representation_network.gnn.norms.0.weight",
+          "grad_norm": 0.0,
+          "grad_mean": 0.0,
+          "grad_max": 0.0,
+          "param_shape": [
+            128
+          ]
+        },
+        {
+          "name": "representation_network.gnn.norms.0.bias",
+          "grad_norm": 0.0,
+          "grad_mean": 0.0,
+          "grad_max": 0.0,
+          "param_shape": [
+            128
+          ]
+        },
+        {
+          "name": "representation_network.gnn.norms.1.weight",
+          "grad_norm": 0.0,
+          "grad_mean": 0.0,
+          "grad_max": 0.0,
+          "param_shape": [
+            128
+          ]
+        },
+        {
+          "name": "representation_network.gnn.norms.1.bias",
+          "grad_norm": 0.0,
+          "grad_mean": 0.0,
+          "grad_max": 0.0,
+          "param_shape": [
+            128
+          ]
+        },
+        {
+          "name": "representation_network.gnn.norms.2.weight",
+          "grad_norm": 0.0,
+          "grad_mean": 0.0,
+          "grad_max": 0.0,
+          "param_shape": [
+            128
+          ]
+        },
+        {
+          "name": "representation_network.gnn.norms.2.bias",
+          "grad_norm": 0.0,
+          "grad_mean": 0.0,
+          "grad_max": 0.0,
+          "param_shape": [
+            128
+          ]
+        }
+      ],
+      "loss": 2.2032957077026367
+    },
+    "test2": {
+      "status": "PASSED",
+      "num_steps": 10,
+      "avg_loss": 1.9995943069458009,
+      "avg_gnn_grad_norm": 0.03514225487597287,
+      "avg_conv_grad_norm": 0.0,
+      "gnn_params_changed": 5,
+      "total_params_monitored": 5,
+      "losses": [
+        1.9200785160064697,
+        1.9459764957427979,
+        1.8472888469696045,
+        2.19319486618042,
+        1.5841491222381592,
+        2.0366370677948,
+        2.2403061389923096,
+        1.9910244941711426,
+        1.9242208003997803,
+        2.3130667209625244
+      ],
+      "gnn_grad_norms": [
+        0.0,
+        0.020950374891981483,
+        0.023039185461432982,
+        0.035937160292329885,
+        0.033061719208490103,
+        0.03986752952914685,
+        0.04005223403995236,
+        0.037953723687678576,
+        0.05428924508548031,
+        0.06627137656323612
+      ],
+      "conv_grad_norms": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "test3": {
+      "status": "PASSED",
+      "dynamics_gnn_params": 12,
+      "dynamics_params_with_grad": 12,
+      "loss": 3.0160372257232666
+    }
+  },
+  "summary": {
+    "all_passed": true,
+    "tests": [
+      {
+        "name": "単一Backward Pass",
+        "status": "PASSED"
+      },
+      {
+        "name": "学習シミュレーション",
+        "status": "PASSED"
+      },
+      {
+        "name": "Dynamics Network Backward",
+        "status": "PASSED"
+      }
+    ]
+  }
+}

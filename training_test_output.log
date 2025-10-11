@@ -1,0 +1,529 @@
+[10-10 14:57:38] WARNING  If you want to use numba to speed up segment tree, please install numba first                                              default_helper.py:450
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+[10-10 14:57:38] WARNING  Please install pyecharts first, you can install it by running 'pip install pyecharts'                                        memory_helper.py:12
+[10-10 14:57:38] WARNING  not found transformer, please install it using: pip install transformers                                               language_transformer.py:9
+[10-10 14:57:59] INFO     [RANK0]: DI-engine DRL Policy                                                                                                base_learner.py:360
+                          GNNStochasticMuZeroModel(                                                                                                                       
+                            (representation_network): GNNRepresentationNetwork(                                                                                           
+                              (gnn): GraphSAGE(                                                                                                                           
+                                (convs): ModuleList(                                                                                                                      
+                                  (0): GraphSAGEConv(                                                                                                                     
+                                    (lin): Linear(in_features=36, out_features=128, bias=True)                                                                            
+                                  )                                                                                                                                       
+                                  (1-2): 2 x GraphSAGEConv(                                                                                                               
+                                    (lin): Linear(in_features=256, out_features=128, bias=True)                                                                           
+                                  )                                                                                                                                       
+                                )                                                                                                                                         
+                                (norms): ModuleList(                                                                                                                      
+                                  (0-2): 3 x LayerNorm((128,), eps=1e-05, elementwise_affine=True)                                                                        
+                                )                                                                                                                                         
+                              )                                                                                                                                           
+                            )                                                                                                                                             
+                            (prediction_network): GNNPredictionNetwork(                                                                                                   
+                              (value_head): GNNValueHead(                                                                                                                 
+                                (mlp): Sequential(                                                                                                                        
+                                  (0): Linear(in_features=384, out_features=128, bias=True)                                                                               
+                                  (1): ReLU()                                                                                                                             
+                                  (2): Linear(in_features=128, out_features=64, bias=True)                                                                                
+                                  (3): ReLU()                                                                                                                             
+                                  (4): Linear(in_features=64, out_features=601, bias=True)                                                                                
+                                )                                                                                                                                         
+                              )                                                                                                                                           
+                              (policy_head): GNNPolicyHead(                                                                                                               
+                                (mlp): Sequential(                                                                                                                        
+                                  (0): Linear(in_features=384, out_features=128, bias=True)                                                                               
+                                  (1): ReLU()                                                                                                                             
+                                  (2): Linear(in_features=128, out_features=64, bias=True)                                                                                
+                                  (3): ReLU()                                                                                                                             
+                                  (4): Linear(in_features=64, out_features=4, bias=True)                                                                                  
+                                )                                                                                                                                         
+                              )                                                                                                                                           
+                            )                                                                                                                                             
+                            (dynamics_network): GNNDynamicsNetwork(                                                                                                       
+                              (action_encoder): Linear(in_features=4, out_features=128, bias=True)                                                                        
+                              (gnn): GraphSAGE(                                                                                                                           
+                                (convs): ModuleList(                                                                                                                      
+                                  (0): GraphSAGEConv(                                                                                                                     
+                                    (lin): Linear(in_features=512, out_features=128, bias=True)                                                                           
+                                  )                                                                                                                                       
+                                  (1-2): 2 x GraphSAGEConv(                                                                                                               
+                                    (lin): Linear(in_features=256, out_features=128, bias=True)                                                                           
+                                  )                                                                                                                                       
+                                )                                                                                                                                         
+                                (norms): ModuleList(                                                                                                                      
+                                  (0-2): 3 x LayerNorm((128,), eps=1e-05, elementwise_affine=True)                                                                        
+                                )                                                                                                                                         
+                              )                                                                                                                                           
+                              (reward_head): Sequential(                                                                                                                  
+                                (0): Linear(in_features=384, out_features=128, bias=True)                                                                                 
+                                (1): ReLU()                                                                                                                               
+                                (2): Linear(in_features=128, out_features=64, bias=True)                                                                                  
+                                (3): ReLU()                                                                                                                               
+                                (4): Linear(in_features=64, out_features=601, bias=True)                                                                                  
+                              )                                                                                                                                           
+                            )                                                                                                                                             
+                            (afterstate_dynamics_network): GNNDynamicsNetwork(                                                                                            
+                              (action_encoder): Linear(in_features=32, out_features=128, bias=True)                                                                       
+                              (gnn): GraphSAGE(                                                                                                                           
+                                (convs): ModuleList(                                                                                                                      
+                                  (0): GraphSAGEConv(                                                                                                                     
+                                    (lin): Linear(in_features=512, out_features=128, bias=True)                                                                           
+                                  )                                                                                                                                       
+                                  (1-2): 2 x GraphSAGEConv(                                                                                                               
+                                    (lin): Linear(in_features=256, out_features=128, bias=True)                                                                           
+                                  )                                                                                                                                       
+                                )                                                                                                                                         
+                                (norms): ModuleList(                                                                                                                      
+                                  (0-2): 3 x LayerNorm((128,), eps=1e-05, elementwise_affine=True)                                                                        
+                                )                                                                                                                                         
+                              )                                                                                                                                           
+                              (reward_head): Sequential(                                                                                                                  
+                                (0): Linear(in_features=384, out_features=128, bias=True)                                                                                 
+                                (1): ReLU()                                                                                                                               
+                                (2): Linear(in_features=128, out_features=64, bias=True)                                                                                  
+                                (3): ReLU()                                                                                                                               
+                                (4): Linear(in_features=64, out_features=601, bias=True)                                                                                  
+                              )                                                                                                                                           
+                            )                                                                                                                                             
+                            (afterstate_prediction_network): GNNPredictionNetwork(                                                                                        
+                              (value_head): GNNValueHead(                                                                                                                 
+                                (mlp): Sequential(                                                                                                                        
+                                  (0): Linear(in_features=384, out_features=128, bias=True)                                                                               
+                                  (1): ReLU()                                                                                                                             
+                                  (2): Linear(in_features=128, out_features=64, bias=True)                                                                                
+                                  (3): ReLU()                                                                                                                             
+                                  (4): Linear(in_features=64, out_features=601, bias=True)                                                                                
+                                )                                                                                                                                         
+                              )                                                                                                                                           
+                              (policy_head): GNNPolicyHead(                                                                                                               
+                                (mlp): Sequential(                                                                                                                        
+                                  (0): Linear(in_features=384, out_features=128, bias=True)                                                                               
+                                  (1): ReLU()                                                                                                                             
+                                  (2): Linear(in_features=128, out_features=64, bias=True)                                                                                
+                                  (3): ReLU()                                                                                                                             
+                                  (4): Linear(in_features=64, out_features=32, bias=True)                                                                                 
+                                )                                                                                                                                         
+                              )                                                                                                                                           
+                            )                                                                                                                                             
+                            (chance_encoder): ChanceEncoder(                                                                                                              
+                              (encoder): ChanceEncoderBackbone(                                                                                                           
+                                (conv1): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))                                                                
+                                (conv2): Conv2d(32, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))                                                                
+                                (fc1): Linear(in_features=1024, out_features=128, bias=True)                                                                              
+                                (fc2): Linear(in_features=128, out_features=64, bias=True)                                                                                
+                                (fc3): Linear(in_features=64, out_features=32, bias=True)                                                                                 
+                              )                                                                                                                                           
+                              (onehot_argmax): StraightThroughEstimator()                                                                                                 
+                            )                                                                                                                                             
+                          )                                                                                                                                               
+
+================================================================================
+🚀 GNN実トレーニングテスト
+================================================================================
+
+📋 設定情報:
+   - Model Type: GNNStochasticMuZeroModel
+   - GNN Layers: 3
+   - GNN Channels: 128
+   - Edge Mode: sparse
+   - Batch Size: 512
+   - Update per Collect: 200
+
+🎯 テスト設定:
+   - 最大環境ステップ: 2000
+   - 評価頻度: 200
+   - 予想時間: 約5-10分
+
+================================================================================
+🏋️  トレーニング開始...
+================================================================================
+
+[10-10 14:58:20] INFO     [EVALUATOR]env 1 finish episode, final reward: 108.0, current episode: 1                                                 muzero_evaluator.py:390
+[10-10 14:58:23] INFO     [EVALUATOR]env 0 finish episode, final reward: 156.0, current episode: 2                                                 muzero_evaluator.py:390
+[10-10 14:58:28] INFO     [EVALUATOR]env 2 finish episode, final reward: 248.0, current episode: 3                                                 muzero_evaluator.py:390
+[10-10 14:58:28] INFO                                                                                                                              muzero_evaluator.py:471
+                          +-------+------------+---------------------+---------------+---------------+                                                                    
+                          | Name  | train_iter | ckpt_name           | episode_count | envstep_count |                                                                    
+                          +-------+------------+---------------------+---------------+---------------+                                                                    
+                          | Value | 0.000000   | iteration_0.pth.tar | 3.000000      | 127.000000    |                                                                    
+                          +-------+------------+---------------------+---------------+---------------+                                                                    
+                          +-------+-------------------------+---------------+---------------------+----------------------+                                                
+                          | Name  | avg_envstep_per_episode | evaluate_time | avg_envstep_per_sec | avg_time_per_episode |                                                
+                          +-------+-------------------------+---------------+---------------------+----------------------+                                                
+                          | Value | 42.333333               | 29.105160     | 4.363487            | 0.103075             |                                                
+                          +-------+-------------------------+---------------+---------------------+----------------------+                                                
+                          +-------+-------------+------------+------------+------------+                                                                                  
+                          | Name  | reward_mean | reward_std | reward_max | reward_min |                                                                                  
+                          +-------+-------------+------------+------------+------------+                                                                                  
+                          | Value | 170.666667  | 58.088056  | 248.000000 | 108.000000 |                                                                                  
+                          +-------+-------------+------------+------------+------------+                                                                                  
+                          +-------+-----------------------+--------------------------+                                                                                    
+                          | Name  | eval_episode_return   | eval_episode_return_mean |                                                                                    
+                          +-------+-----------------------+--------------------------+                                                                                    
+                          | Value | [156.0, 108.0, 248.0] | 170.666667               |                                                                                    
+                          +-------+-----------------------+--------------------------+                                                                                    
+                                                                                                                                                                          
+[10-10 14:58:28] INFO     [RANK0]: learner save ckpt in                                                                                                base_learner.py:360
+                          ./data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251010_145740/ckpt/ckpt_best.                    
+                          pth.tar                                                                                                                                         
+[10-10 14:58:29] INFO     Debug collect shapes: stack_obs=(8, 16, 4, 4), action=(), searched_value=<class 'float'>, predicted_value=(1,)           muzero_collector.py:494
+[10-10 14:59:52] INFO     [RANK0]: === Training Iteration 0 Result ===                                                                                 base_learner.py:360
+[10-10 14:59:52] INFO                                                                                                                                  learner_hook.py:228
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Value | 1.000000                     | 0.003000   | 66.588028               | 74.867920      |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Value | 8.033467        | 31.992973       | 38.391567      | -0.027722            |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Value | 17.328680                  | 31.992973                 | 0.193896            | 67.557999          |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Value | 6.817708          | 66.222168        | -0.000006             | -0.000006            |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Value | 1.304555                      | 6.638553                     | 13.394827                       |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                                                                                                                                                                          
+[10-10 14:59:52] INFO     [RANK0]: learner save ckpt in                                                                                                base_learner.py:360
+                          ./data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251010_145740/ckpt/iteration_                    
+                          0.pth.tar                                                                                                                                       
+[10-10 15:00:41] INFO     [RANK0]: === Training Iteration 100 Result ===                                                                               base_learner.py:360
+[10-10 15:00:41] INFO                                                                                                                                  learner_hook.py:228
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Value | 1.000000                     | 0.003000   | 6.248572                | 29.382573      |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Value | 8.115932        | 7.817950        | 15.242994      | -0.736245            |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Value | 13.662653                  | 12.761829                 | 0.147285            | 37.509611          |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Value | 7.053031          | 73.259375        | 4.226528              | 57.437608            |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Value | 1.334745                      | 7.047837                     | 0.477015                        |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                                                                                                                                                                          
+[10-10 15:01:47] INFO     [EVALUATOR]env 2 finish episode, final reward: 108.0, current episode: 1                                                 muzero_evaluator.py:390
+[10-10 15:01:55] INFO     [EVALUATOR]env 0 finish episode, final reward: 260.0, current episode: 2                                                 muzero_evaluator.py:390
+[10-10 15:02:00] INFO     [EVALUATOR]env 1 finish episode, final reward: 468.0, current episode: 3                                                 muzero_evaluator.py:390
+[10-10 15:02:00] INFO                                                                                                                              muzero_evaluator.py:471
+                          +-------+------------+-----------------------+---------------+---------------+                                                                  
+                          | Name  | train_iter | ckpt_name             | episode_count | envstep_count |                                                                  
+                          +-------+------------+-----------------------+---------------+---------------+                                                                  
+                          | Value | 200.000000 | iteration_200.pth.tar | 3.000000      | 151.000000    |                                                                  
+                          +-------+------------+-----------------------+---------------+---------------+                                                                  
+                          +-------+-------------------------+---------------+---------------------+----------------------+                                                
+                          | Name  | avg_envstep_per_episode | evaluate_time | avg_envstep_per_sec | avg_time_per_episode |                                                
+                          +-------+-------------------------+---------------+---------------------+----------------------+                                                
+                          | Value | 50.333333               | 31.127039     | 4.851088            | 0.096379             |                                                
+                          +-------+-------------------------+---------------+---------------------+----------------------+                                                
+                          +-------+-------------+------------+------------+------------+                                                                                  
+                          | Name  | reward_mean | reward_std | reward_max | reward_min |                                                                                  
+                          +-------+-------------+------------+------------+------------+                                                                                  
+                          | Value | 278.666667  | 147.560910 | 468.000000 | 108.000000 |                                                                                  
+                          +-------+-------------+------------+------------+------------+                                                                                  
+                          +-------+-----------------------+--------------------------+                                                                                    
+                          | Name  | eval_episode_return   | eval_episode_return_mean |                                                                                    
+                          +-------+-----------------------+--------------------------+                                                                                    
+                          | Value | [260.0, 468.0, 108.0] | 278.666667               |                                                                                    
+                          +-------+-----------------------+--------------------------+                                                                                    
+                                                                                                                                                                          
+[10-10 15:02:00] INFO     [RANK0]: learner save ckpt in                                                                                                base_learner.py:360
+                          ./data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251010_145740/ckpt/ckpt_best.                    
+                          pth.tar                                                                                                                                         
+[10-10 15:03:20] INFO     collect end:                                                                                                             muzero_collector.py:838
+                          episode_count: 16                                                                                                                               
+                          envstep_count: 1143                                                                                                                             
+                          avg_envstep_per_episode: 71.4375                                                                                                                
+                          avg_envstep_per_sec: 7.062528894761918                                                                                                          
+                          avg_episode_per_sec: 0.09886304664583613                                                                                                        
+                          collect_time: 161.84004582943814                                                                                                                
+                          reward_mean: 484.0                                                                                                                              
+                          reward_std: 237.15817506466016                                                                                                                  
+                          reward_max: 1032.0                                                                                                                              
+                          reward_min: 156.0                                                                                                                               
+                          total_envstep_count: 1143                                                                                                                       
+                          total_episode_count: 16                                                                                                                         
+                          total_duration: 406.07187396429424                                                                                                              
+                          visit_entropy: 1.7982577105551831                                                                                                               
+[10-10 15:03:20] INFO     [RANK0]: === Training Iteration 200 Result ===                                                                               base_learner.py:360
+[10-10 15:03:20] INFO                                                                                                                                  learner_hook.py:228
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Value | 1.000000                     | 0.003000   | 8.895919                | 29.707295      |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Value | 8.050202        | 7.774060        | 13.908856      | -0.576426            |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Value | 13.129226                  | 11.593836                 | 0.142397            | 43.237598          |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Value | 7.131511          | 119.486503       | 4.416671              | 104.649546           |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Value | 1.337983                      | 9.348068                     | 0.824011                        |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                                                                                                                                                                          
+[10-10 15:04:20] INFO     [RANK0]: === Training Iteration 300 Result ===                                                                               base_learner.py:360
+[10-10 15:04:20] INFO                                                                                                                                  learner_hook.py:228
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Value | 1.000000                     | 0.003000   | 9.589634                | 29.656270      |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Value | 7.645552        | 7.869154        | 14.829977      | -0.529913            |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Value | 12.575384                  | 12.196886                 | 0.108589            | 68.641838          |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Value | 7.619792          | 150.028262       | 4.616765              | 126.621930           |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Value | 1.401218                      | 10.452687                    | 1.008488                        |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                                                                                                                                                                          
+[10-10 15:05:51] INFO     [EVALUATOR]env 2 finish episode, final reward: 224.0, current episode: 1                                                 muzero_evaluator.py:390
+[10-10 15:05:52] INFO     [EVALUATOR]env 0 finish episode, final reward: 264.0, current episode: 2                                                 muzero_evaluator.py:390
+[10-10 15:06:07] INFO     [EVALUATOR]env 1 finish episode, final reward: 996.0, current episode: 3                                                 muzero_evaluator.py:390
+[10-10 15:06:07] INFO                                                                                                                              muzero_evaluator.py:471
+                          +-------+------------+-----------------------+---------------+---------------+                                                                  
+                          | Name  | train_iter | ckpt_name             | episode_count | envstep_count |                                                                  
+                          +-------+------------+-----------------------+---------------+---------------+                                                                  
+                          | Value | 400.000000 | iteration_400.pth.tar | 3.000000      | 206.000000    |                                                                  
+                          +-------+------------+-----------------------+---------------+---------------+                                                                  
+                          +-------+-------------------------+---------------+---------------------+----------------------+                                                
+                          | Name  | avg_envstep_per_episode | evaluate_time | avg_envstep_per_sec | avg_time_per_episode |                                                
+                          +-------+-------------------------+---------------+---------------------+----------------------+                                                
+                          | Value | 68.666667               | 46.719961     | 4.409250            | 0.064212             |                                                
+                          +-------+-------------------------+---------------+---------------------+----------------------+                                                
+                          +-------+-------------+------------+------------+------------+                                                                                  
+                          | Name  | reward_mean | reward_std | reward_max | reward_min |                                                                                  
+                          +-------+-------------+------------+------------+------------+                                                                                  
+                          | Value | 494.666667  | 354.872121 | 996.000000 | 224.000000 |                                                                                  
+                          +-------+-------------+------------+------------+------------+                                                                                  
+                          +-------+-----------------------+--------------------------+                                                                                    
+                          | Name  | eval_episode_return   | eval_episode_return_mean |                                                                                    
+                          +-------+-----------------------+--------------------------+                                                                                    
+                          | Value | [264.0, 996.0, 224.0] | 494.666667               |                                                                                    
+                          +-------+-----------------------+--------------------------+                                                                                    
+                                                                                                                                                                          
+[10-10 15:06:07] INFO     [RANK0]: learner save ckpt in                                                                                                base_learner.py:360
+                          ./data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251010_145740/ckpt/ckpt_best.                    
+                          pth.tar                                                                                                                                         
+[10-10 15:07:25] INFO     collect end:                                                                                                             muzero_collector.py:838
+                          episode_count: 8                                                                                                                                
+                          envstep_count: 581                                                                                                                              
+                          avg_envstep_per_episode: 72.625                                                                                                                 
+                          avg_envstep_per_sec: 7.448707248193973                                                                                                          
+                          avg_episode_per_sec: 0.10256395522470187                                                                                                        
+                          collect_time: 78.0001120517752                                                                                                                  
+                          reward_mean: 491.0                                                                                                                              
+                          reward_std: 226.0508792285489                                                                                                                   
+                          reward_max: 848.0                                                                                                                               
+                          reward_min: 200.0                                                                                                                               
+                          total_envstep_count: 1724                                                                                                                       
+                          total_episode_count: 24                                                                                                                         
+                          total_duration: 562.0720980678446                                                                                                               
+                          visit_entropy: 1.6622758717047124                                                                                                               
+[10-10 15:07:26] INFO     [RANK0]: === Training Iteration 400 Result ===                                                                               base_learner.py:360
+[10-10 15:07:26] INFO                                                                                                                                  learner_hook.py:228
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Value | 1.000000                     | 0.003000   | 8.606507                | 28.588454      |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Value | 7.622788        | 7.576413        | 13.882061      | -0.475618            |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Value | 11.810424                  | 11.191310                 | 0.066670            | 67.652021          |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Value | 7.733783          | 177.969147       | 5.036996              | 156.708208           |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Value | 1.411847                      | 11.515008                    | 1.400350                        |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                                                                                                                                                                          
+[10-10 15:08:14] INFO     [RANK0]: === Training Iteration 500 Result ===                                                                               base_learner.py:360
+[10-10 15:08:14] INFO                                                                                                                                  learner_hook.py:228
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Value | 1.000000                     | 0.003000   | 8.037879                | 27.803637      |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Value | 7.662524        | 7.362334        | 14.126990      | -0.503745            |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Value | 11.396377                  | 11.370666                 | 0.045438            | 71.173596          |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Value | 7.829191          | 186.762795       | 5.205753              | 167.734612           |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Value | 1.429817                      | 11.795307                    | 1.567958                        |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                                                                                                                                                                          
+[10-10 15:09:22] INFO     [EVALUATOR]env 1 finish episode, final reward: 144.0, current episode: 1                                                 muzero_evaluator.py:390
+[10-10 15:09:27] INFO     [EVALUATOR]env 0 finish episode, final reward: 236.0, current episode: 2                                                 muzero_evaluator.py:390
+[10-10 15:09:31] INFO     [EVALUATOR]env 2 finish episode, final reward: 444.0, current episode: 3                                                 muzero_evaluator.py:390
+[10-10 15:09:31] INFO                                                                                                                              muzero_evaluator.py:471
+                          +-------+------------+-----------------------+---------------+---------------+                                                                  
+                          | Name  | train_iter | ckpt_name             | episode_count | envstep_count |                                                                  
+                          +-------+------------+-----------------------+---------------+---------------+                                                                  
+                          | Value | 600.000000 | iteration_600.pth.tar | 3.000000      | 155.000000    |                                                                  
+                          +-------+------------+-----------------------+---------------+---------------+                                                                  
+                          +-------+-------------------------+---------------+---------------------+----------------------+                                                
+                          | Name  | avg_envstep_per_episode | evaluate_time | avg_envstep_per_sec | avg_time_per_episode |                                                
+                          +-------+-------------------------+---------------+---------------------+----------------------+                                                
+                          | Value | 51.666667               | 29.874732     | 5.188331            | 0.100419             |                                                
+                          +-------+-------------------------+---------------+---------------------+----------------------+                                                
+                          +-------+-------------+------------+------------+------------+                                                                                  
+                          | Name  | reward_mean | reward_std | reward_max | reward_min |                                                                                  
+                          +-------+-------------+------------+------------+------------+                                                                                  
+                          | Value | 274.666667  | 125.489265 | 444.000000 | 144.000000 |                                                                                  
+                          +-------+-------------+------------+------------+------------+                                                                                  
+                          +-------+-----------------------+--------------------------+                                                                                    
+                          | Name  | eval_episode_return   | eval_episode_return_mean |                                                                                    
+                          +-------+-----------------------+--------------------------+                                                                                    
+                          | Value | [236.0, 144.0, 444.0] | 274.666667               |                                                                                    
+                          +-------+-----------------------+--------------------------+                                                                                    
+                                                                                                                                                                          
+[10-10 15:11:22] INFO     collect end:                                                                                                             muzero_collector.py:838
+                          episode_count: 8                                                                                                                                
+                          envstep_count: 618                                                                                                                              
+                          avg_envstep_per_episode: 77.25                                                                                                                  
+                          avg_envstep_per_sec: 5.588567894631371                                                                                                          
+                          avg_episode_per_sec: 0.0723439209661019                                                                                                         
+                          collect_time: 110.58289201311815                                                                                                                
+                          reward_mean: 582.0                                                                                                                              
+                          reward_std: 379.214978607122                                                                                                                    
+                          reward_max: 1328.0                                                                                                                              
+                          reward_min: 264.0                                                                                                                               
+                          total_envstep_count: 2342                                                                                                                       
+                          total_episode_count: 32                                                                                                                         
+                          total_duration: 783.2378820940809                                                                                                               
+                          visit_entropy: 1.6874279671332348                                                                                                               
+[10-10 15:11:23] INFO     [RANK0]: === Training Iteration 600 Result ===                                                                               base_learner.py:360
+[10-10 15:11:23] INFO                                                                                                                                  learner_hook.py:228
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Value | 1.000000                     | 0.003000   | 7.104219                | 26.011146      |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Value | 7.663666        | 6.974933        | 13.828578      | -0.591906            |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Value | 11.012042                  | 11.112221                 | 0.044363            | 73.515162          |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Value | 7.783618          | 208.186641       | 5.938280              | 187.220033           |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Value | 1.419119                      | 12.516296                    | 1.503252                        |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                                                                                                                                                                          
+[10-10 15:12:12] INFO     [RANK0]: === Training Iteration 700 Result ===                                                                               base_learner.py:360
+[10-10 15:12:12] INFO                                                                                                                                  learner_hook.py:228
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          | Value | 1.000000                     | 0.003000   | 6.576771                | 24.673508      |                                                
+                          +-------+------------------------------+------------+-------------------------+----------------+                                                
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          | Value | 7.648781        | 6.937767        | 14.296530      | -0.717536            |                                                           
+                          +-------+-----------------+-----------------+----------------+----------------------+                                                           
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          | Value | 10.798660                  | 11.375985                 | 0.045529            | 95.091535          |                                   
+                          +-------+----------------------------+---------------------------+---------------------+--------------------+                                   
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          | Value | 8.375592          | 220.412091       | 5.897536              | 195.093278           |                                                 
+                          +-------+-------------------+------------------+-----------------------+----------------------+                                                 
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                          | Value | 1.474723                      | 12.739432                    | 1.035131                        |                                      
+                          +-------+-------------------------------+------------------------------+---------------------------------+                                      
+                                                                                                                                                                          
+[10-10 15:12:59] INFO     [RANK0]: learner save ckpt in                                                                                                base_learner.py:360
+                          ./data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251010_145740/ckpt/iteration_                    
+                          800.pth.tar                                                                                                                                     
+
+✅ トレーニングテスト完了！
