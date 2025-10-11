@@ -584,31 +584,11 @@ class GNNAgent:
         self.device = device
         self.use_mcts = use_mcts
         self.num_simulations = num_simulations
+        self.num_channels = 128  # デフォルト値、モデルロード時に調整される可能性あり
+        self.num_gnn_layers = 3
         
         # モデルを構築
-        self.representation_net = GNNRepresentationNetwork(
-            observation_shape=(16, grid_size, grid_size),
-            num_channels=128,
-            num_gnn_layers=3,
-            grid_size=grid_size,
-            include_row_col_edges=True,
-            dropout=0.0,
-            edge_mode='sparse'
-        ).to(device)
-        
-        self.policy_head = GNNPolicyHead(
-            num_channels=128,
-            action_space_size=4,
-            hidden_channels=[128, 64]
-        ).to(device)
-        
-        # MCTSを使用する場合、value headも必要
-        if use_mcts:
-            self.value_head = GNNValueHead(
-                num_channels=128,
-                value_support_size=601,  # LightZeroのデフォルト
-                hidden_channels=[128, 64]
-            ).to(device)
+        self._build_model()
         
         # モデルをロード（4×4で学習したモデルを任意サイズに適用）
         self._load_model(model_path)
@@ -619,6 +599,32 @@ class GNNAgent:
         if use_mcts:
             self.value_head.eval()
             print(f"✓ MCTSモード有効（シミュレーション回数: {num_simulations}）")
+    
+    def _build_model(self):
+        """モデルを構築（または再構築）"""
+        self.representation_net = GNNRepresentationNetwork(
+            observation_shape=(16, self.grid_size, self.grid_size),
+            num_channels=self.num_channels,
+            num_gnn_layers=self.num_gnn_layers,
+            grid_size=self.grid_size,
+            include_row_col_edges=True,
+            dropout=0.0,
+            edge_mode='sparse'
+        ).to(self.device)
+        
+        self.policy_head = GNNPolicyHead(
+            num_channels=self.num_channels,
+            action_space_size=4,
+            hidden_channels=[128, 64]
+        ).to(self.device)
+        
+        # MCTSを使用する場合、value headも必要
+        if self.use_mcts:
+            self.value_head = GNNValueHead(
+                num_channels=self.num_channels,
+                value_support_size=601,  # LightZeroのデフォルト
+                hidden_channels=[128, 64]
+            ).to(self.device)
     
     def _load_model(self, model_path: str):
         """学習済みモデルをロード"""
@@ -633,6 +639,24 @@ class GNNAgent:
             state_dict = checkpoint['state_dict']
         else:
             state_dict = checkpoint
+        
+        # チェックポイントからnum_channelsを推測
+        detected_num_channels = None
+        for key, value in state_dict.items():
+            if 'representation_network.gnn.convs.0.lin.weight' in key:
+                # GNN 1層目の出力次元からnum_channelsを推測
+                detected_num_channels = value.shape[0]
+                break
+            elif 'gnn.convs.0.lin.weight' in key:
+                detected_num_channels = value.shape[0]
+                break
+        
+        # num_channelsが異なる場合は再構築
+        if detected_num_channels is not None and detected_num_channels != self.num_channels:
+            print(f"警告: モデルのnum_channelsが異なります（現在: {self.num_channels}, チェックポイント: {detected_num_channels}）")
+            print(f"モデルを再構築します...")
+            self.num_channels = detected_num_channels
+            self._build_model()
         
         # キーの変換（必要に応じて）
         rep_state_dict = {}
@@ -1041,8 +1065,8 @@ def main():
     parser.add_argument('--episodes', type=int, default=10,
                        help='実行するエピソード数 (デフォルト: 10)')
     parser.add_argument('--model-path', type=str,
-                       default='/opendilab/2048GNN/LightZero/zoo/game_2048/config/data_gnn_stochastic_mz/gnn_simple_success1/ckpt/iteration_79400.pth.tar',
-                       help='学習済みモデルのパス')
+                       default=None,
+                       help='学習済みモデルのパス（省略時は grid-size に応じて自動選択）')
     parser.add_argument('--render', action='store_true',
                        help='リアルタイムで盤面を表示')
     parser.add_argument('--save-gif', action='store_true',
@@ -1059,6 +1083,46 @@ def main():
                        help='使用するデバイス')
     
     args = parser.parse_args()
+    
+    # モデルパスの自動選択
+    if args.model_path is None:
+        if args.grid_size == 3:
+            args.model_path = '/opendilab/2048GNN/LightZero/zoo/game_2048/config/data_gnn_stochastic_mz_3x3/game_2048_gnn_3x3_npct-2_ns50_upc100_rer0.0_bs256_gnn2L96D_adjacent_seed0_resume_251008_215736/ckpt/iteration_60000.pth.tar'
+        elif args.grid_size == 4:
+            # 4×4のデフォルトモデルを探す（最新の最適化版を優先）
+            possible_paths = [
+                '/opendilab/2048GNN/LightZero/data_gnn_stochastic_mz_optimized/game_2048_gnn_opt_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251011_032638/ckpt/ckpt_best.pth.tar',
+                '/opendilab/2048GNN/LightZero/data_gnn_stochastic_mz_optimized/game_2048_gnn_opt_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251011_032515/ckpt/ckpt_best.pth.tar',
+                '/opendilab/2048GNN/LightZero/data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251007_230441/ckpt/ckpt_best.pth.tar',
+            ]
+            for path in possible_paths:
+                if os.path.exists(path):
+                    args.model_path = path
+                    break
+            if args.model_path is None:
+                print(f"エラー: 4×4用の学習済みモデルが見つかりません。")
+                print("--model-path オプションでモデルパスを指定してください。")
+                sys.exit(1)
+        else:
+            print(f"警告: grid-size {args.grid_size} 用のデフォルトモデルはありません。")
+            print("4×4モデルで試行します（転移学習）...")
+            # 4×4モデルをフォールバックとして使用
+            possible_paths = [
+                '/opendilab/2048GNN/LightZero/data_gnn_stochastic_mz_optimized/game_2048_gnn_opt_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251011_032638/ckpt/ckpt_best.pth.tar',
+            ]
+            for path in possible_paths:
+                if os.path.exists(path):
+                    args.model_path = path
+                    break
+            if args.model_path is None:
+                print(f"エラー: フォールバック用のモデルも見つかりません。")
+                print("--model-path オプションでモデルパスを指定してください。")
+                sys.exit(1)
+    
+    # モデルパスの存在確認
+    if not os.path.exists(args.model_path):
+        print(f"エラー: モデルファイルが見つかりません: {args.model_path}")
+        sys.exit(1)
     
     # ヘッダー
     print("="*60)

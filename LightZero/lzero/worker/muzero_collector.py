@@ -474,8 +474,13 @@ class MuZeroCollector(ISerialCollector):
                 # - 'predicted_next_text' (任意): テキスト予測がある場合の文字列
                 # - 'timestep' (任意): ポリシーが返す timestep
                 # collector はこれらを取り出して game_segment に保存します。
+                
+                # #どのポリシーを出力しているかデバッグ出力
+                # self._logger.info(f"Using policy: {self._policy}")
+                # self._logger.info(f"stack_obs shape: {stack_obs.shape}, action_mask length: {len(action_mask)}, to_play length: {len(to_play)}, timestep length: {len(timestep)}")
+                # self._logger.info(f"ready_env_id: {ready_env_id}")
+                # self._logger.info(f"chance_dict: {chance_dict}")
                 policy_output = self._policy.forward(stack_obs, action_mask, temperature, to_play, epsilon, ready_env_id=ready_env_id, timestep=timestep)
-
                 # --- デバッグログ（1回だけ）: stack_obs と policy_output の形状を出力 ---
                 try:
                     if not hasattr(self, '_debug_logged_policy_shapes'):
