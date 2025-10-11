@@ -1,0 +1,36 @@
+{
+  "timestamp": "2025-10-10T14:48:47.772069",
+  "model_type": "GNNStochasticMuZeroModel",
+  "verification_tests": {
+    "model_architecture": {
+      "status": "PASSED",
+      "gnn_layers": 22,
+      "conv2d_layers": 0,
+      "total_parameters": 1013704
+    },
+    "forward_pass": {
+      "status": "PASSED",
+      "gnn_activations": 8,
+      "conv2d_activations": 0
+    },
+    "training_monitoring": {
+      "status": "PASSED",
+      "iterations": 20,
+      "gnn_forward_count": 160,
+      "conv2d_forward_count": 0
+    }
+  },
+  "conclusion": {
+    "uses_gnn": true,
+    "uses_cnn": false,
+    "all_tests_passed": true,
+    "confidence": "100%",
+    "evidence": [
+      "22個のGNNレイヤーが検出され、Conv2dは0個",
+      "Forward Pass中にGNNのみが動作（8回）",
+      "トレーニング中GNNが160回動作、CNNは0回",
+      "モデルタイプがGNNStochasticMuZeroModel",
+      "すべてのネットワークがGNNベース実装"
+    ]
+  }
+}

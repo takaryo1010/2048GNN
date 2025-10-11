@@ -1,0 +1,46 @@
+[2025-10-10 14:58:29][muzero_collector.py:494][INFO] Debug collect shapes: stack_obs=(8, 16, 4, 4), action=(), searched_value=<class 'float'>, predicted_value=(1,)
+[2025-10-10 15:03:20][muzero_collector.py:838][INFO] collect end:
+episode_count: 16
+envstep_count: 1143
+avg_envstep_per_episode: 71.4375
+avg_envstep_per_sec: 7.062528894761918
+avg_episode_per_sec: 0.09886304664583613
+collect_time: 161.84004582943814
+reward_mean: 484.0
+reward_std: 237.15817506466016
+reward_max: 1032.0
+reward_min: 156.0
+total_envstep_count: 1143
+total_episode_count: 16
+total_duration: 406.07187396429424
+visit_entropy: 1.7982577105551831
+[2025-10-10 15:07:25][muzero_collector.py:838][INFO] collect end:
+episode_count: 8
+envstep_count: 581
+avg_envstep_per_episode: 72.625
+avg_envstep_per_sec: 7.448707248193973
+avg_episode_per_sec: 0.10256395522470187
+collect_time: 78.0001120517752
+reward_mean: 491.0
+reward_std: 226.0508792285489
+reward_max: 848.0
+reward_min: 200.0
+total_envstep_count: 1724
+total_episode_count: 24
+total_duration: 562.0720980678446
+visit_entropy: 1.6622758717047124
+[2025-10-10 15:11:22][muzero_collector.py:838][INFO] collect end:
+episode_count: 8
+envstep_count: 618
+avg_envstep_per_episode: 77.25
+avg_envstep_per_sec: 5.588567894631371
+avg_episode_per_sec: 0.0723439209661019
+collect_time: 110.58289201311815
+reward_mean: 582.0
+reward_std: 379.214978607122
+reward_max: 1328.0
+reward_min: 264.0
+total_envstep_count: 2342
+total_episode_count: 32
+total_duration: 783.2378820940809
+visit_entropy: 1.6874279671332348

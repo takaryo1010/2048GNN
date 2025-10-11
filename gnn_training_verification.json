@@ -1,0 +1,56 @@
+{
+  "timestamp": "2025-10-10T14:46:37.504001",
+  "model_structure": {
+    "model_type": "GNNStochasticMuZeroModel",
+    "is_gnn_model": true,
+    "has_gnn_layers": true,
+    "has_conv2d_layers": false,
+    "gnn_layer_count": 22,
+    "conv2d_layer_count": 0,
+    "gnn_layers": [
+      " (GNNStochasticMuZeroModel)",
+      "representation_network (GNNRepresentationNetwork)",
+      "representation_network.gnn (GraphSAGE)",
+      "representation_network.gnn.convs.0 (GraphSAGEConv)",
+      "representation_network.gnn.convs.1 (GraphSAGEConv)",
+      "representation_network.gnn.convs.2 (GraphSAGEConv)",
+      "prediction_network (GNNPredictionNetwork)",
+      "prediction_network.value_head (GNNValueHead)",
+      "prediction_network.policy_head (GNNPolicyHead)",
+      "dynamics_network (GNNDynamicsNetwork)",
+      "dynamics_network.gnn (GraphSAGE)",
+      "dynamics_network.gnn.convs.0 (GraphSAGEConv)",
+      "dynamics_network.gnn.convs.1 (GraphSAGEConv)",
+      "dynamics_network.gnn.convs.2 (GraphSAGEConv)",
+      "afterstate_dynamics_network (GNNDynamicsNetwork)",
+      "afterstate_dynamics_network.gnn (GraphSAGE)",
+      "afterstate_dynamics_network.gnn.convs.0 (GraphSAGEConv)",
+      "afterstate_dynamics_network.gnn.convs.1 (GraphSAGEConv)",
+      "afterstate_dynamics_network.gnn.convs.2 (GraphSAGEConv)",
+      "afterstate_prediction_network (GNNPredictionNetwork)",
+      "afterstate_prediction_network.value_head (GNNValueHead)",
+      "afterstate_prediction_network.policy_head (GNNPolicyHead)"
+    ],
+    "conv2d_layers": [],
+    "verification_passed": true
+  },
+  "forward_pass": {
+    "gnn_forward_count": 8,
+    "conv2d_forward_count": 0,
+    "verification_passed": true
+  },
+  "backward_pass": {
+    "gnn_params_with_grad": 0,
+    "total_gnn_params": 0,
+    "conv2d_params_with_grad": 0,
+    "total_conv2d_params": 0,
+    "verification_passed": false
+  },
+  "all_tests_passed": false,
+  "config": {
+    "model_type": "GNNStochasticMuZeroModel",
+    "num_gnn_layers": 3,
+    "num_channels": 128,
+    "edge_mode": "sparse"
+  }
+}

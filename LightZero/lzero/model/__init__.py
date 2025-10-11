@@ -3,3 +3,4 @@ from .utils import *
 from .common import *
 from .gat_muzero_model import GATMuZeroModel
 from .gat_stochastic_muzero_model import GATStochasticMuZeroModel
+from .gnn_stochastic_muzero_model import GNNStochasticMuZeroModel

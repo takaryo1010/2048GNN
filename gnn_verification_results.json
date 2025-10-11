@@ -1,0 +1,94 @@
+{
+  "architecture_analysis": {
+    "model_type": "GNNStochasticMuZeroModel",
+    "total_parameters": 1013704,
+    "trainable_parameters": 1013704,
+    "has_representation_network": true,
+    "has_dynamics_network": true,
+    "has_prediction_network": true,
+    "has_afterstate_dynamics_network": true,
+    "has_afterstate_prediction_network": true,
+    "networks": {
+      "representation_network": {
+        "type": "GNNRepresentationNetwork",
+        "has_conv2d": false,
+        "conv2d_layers": [],
+        "has_gnn": true,
+        "gnn_layers": [
+          "representation_network. (GNNRepresentationNetwork)",
+          "representation_network.gnn (GraphSAGE)",
+          "representation_network.gnn.convs.0 (GraphSAGEConv)",
+          "representation_network.gnn.convs.1 (GraphSAGEConv)",
+          "representation_network.gnn.convs.2 (GraphSAGEConv)"
+        ],
+        "parameters": 71296
+      },
+      "dynamics_network": {
+        "type": "GNNDynamicsNetwork",
+        "has_conv2d": false,
+        "conv2d_layers": [],
+        "has_gnn": true,
+        "gnn_layers": [
+          "dynamics_network. (GNNDynamicsNetwork)",
+          "dynamics_network.gnn (GraphSAGE)",
+          "dynamics_network.gnn.convs.0 (GraphSAGEConv)",
+          "dynamics_network.gnn.convs.1 (GraphSAGEConv)",
+          "dynamics_network.gnn.convs.2 (GraphSAGEConv)"
+        ],
+        "parameters": 229465
+      },
+      "prediction_network": {
+        "type": "GNNPredictionNetwork",
+        "has_conv2d": false,
+        "conv2d_layers": [],
+        "has_gnn": true,
+        "gnn_layers": [
+          "prediction_network. (GNNPredictionNetwork)",
+          "prediction_network.value_head (GNNValueHead)",
+          "prediction_network.policy_head (GNNPolicyHead)"
+        ],
+        "parameters": 154397
+      },
+      "afterstate_dynamics_network": {
+        "type": "GNNDynamicsNetwork",
+        "has_conv2d": false,
+        "conv2d_layers": [],
+        "has_gnn": true,
+        "gnn_layers": [
+          "afterstate_dynamics_network. (GNNDynamicsNetwork)",
+          "afterstate_dynamics_network.gnn (GraphSAGE)",
+          "afterstate_dynamics_network.gnn.convs.0 (GraphSAGEConv)",
+          "afterstate_dynamics_network.gnn.convs.1 (GraphSAGEConv)",
+          "afterstate_dynamics_network.gnn.convs.2 (GraphSAGEConv)"
+        ],
+        "parameters": 233049
+      },
+      "afterstate_prediction_network": {
+        "type": "GNNPredictionNetwork",
+        "has_conv2d": false,
+        "conv2d_layers": [],
+        "has_gnn": true,
+        "gnn_layers": [
+          "afterstate_prediction_network. (GNNPredictionNetwork)",
+          "afterstate_prediction_network.value_head (GNNValueHead)",
+          "afterstate_prediction_network.policy_head (GNNPolicyHead)"
+        ],
+        "parameters": 156217
+      }
+    }
+  },
+  "forward_pass_test": {
+    "total_layers_activated": 18,
+    "gnn_layers_activated": 0,
+    "conv2d_layers_activated": 0,
+    "gnn_activations": {},
+    "conv2d_activations": {}
+  },
+  "config": {
+    "model_type": "GNNStochasticMuZeroModel",
+    "num_gnn_layers": 3,
+    "num_channels": 128,
+    "edge_mode": "sparse",
+    "grid_size": 4
+  }
+}

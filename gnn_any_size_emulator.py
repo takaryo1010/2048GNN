@@ -1041,7 +1041,7 @@ def main():
     parser.add_argument('--episodes', type=int, default=10,
                        help='実行するエピソード数 (デフォルト: 10)')
     parser.add_argument('--model-path', type=str,
-                       default='./LightZero/zoo/game_2048/config/data_gnn_stochastic_mz/gnn_simple_success/ckpt/iteration_79400.pth.tar',
+                       default='/opendilab/2048GNN/LightZero/zoo/game_2048/config/data_gnn_stochastic_mz/gnn_simple_success1/ckpt/iteration_79400.pth.tar',
                        help='学習済みモデルのパス')
     parser.add_argument('--render', action='store_true',
                        help='リアルタイムで盤面を表示')
