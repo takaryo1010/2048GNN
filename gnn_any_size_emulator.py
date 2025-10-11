@@ -396,25 +396,34 @@ class GraphSAGE(nn.Module):
         return x
     
     def _message_passing(self, x: torch.Tensor, edge_index: torch.Tensor, conv: nn.Module):
-        """メッセージパッシング"""
+        """メッセージパッシング（最適化版：ベクトル演算を使用）"""
         batch_size, num_nodes, feat_dim = x.size()
         
         # エッジインデックスから隣接ノードを取得
-        src_nodes = edge_index[0]
-        dst_nodes = edge_index[1]
+        src_nodes = edge_index[0]  # [E]
+        dst_nodes = edge_index[1]  # [E]
         
-        # 各ノードの隣接ノードの特徴量を集約
+        # ソースノードの特徴量を取得 [B, E, D]
+        # x[:, src_nodes, :] で全バッチのソース特徴量を一度に取得
+        src_features = x[:, src_nodes, :]  # [B, E, D]
+        
+        # 宛先ノードごとに集約（平均を計算）
+        # scatter_add を使って効率的に集約
         aggregated = torch.zeros(batch_size, num_nodes, feat_dim, device=x.device)
+        count = torch.zeros(batch_size, num_nodes, 1, device=x.device)
         
-        for dst in range(num_nodes):
-            # このノードへのエッジを見つける
-            neighbor_mask = (dst_nodes == dst)
-            neighbors = src_nodes[neighbor_mask]
-            
-            if len(neighbors) > 0:
-                # 隣接ノードの特徴量を平均
-                neighbor_feats = x[:, neighbors, :]  # [B, num_neighbors, D]
-                aggregated[:, dst, :] = neighbor_feats.mean(dim=1)
+        # dst_nodesを[B, E, D]の形状に合わせて拡張
+        dst_nodes_expanded = dst_nodes.unsqueeze(0).unsqueeze(-1).expand(batch_size, -1, feat_dim)
+        
+        # scatter_add で集約（合計を計算）
+        aggregated = aggregated.scatter_add(1, dst_nodes_expanded, src_features)
+        
+        # 各ノードへのエッジ数をカウント
+        count_expanded = dst_nodes.unsqueeze(0).unsqueeze(-1).expand(batch_size, -1, 1)
+        count = count.scatter_add(1, count_expanded, torch.ones_like(src_features[:, :, :1]))
+        
+        # 平均を計算（0除算を避ける）
+        aggregated = aggregated / (count + 1e-8)
         
         # 自分の特徴量と隣接の特徴量を結合
         combined = torch.cat([x, aggregated], dim=-1)  # [B, N, 2*D]
