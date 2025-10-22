@@ -223,6 +223,7 @@ class StochasticMuZeroPolicy(MuZeroPolicy):
         # 日本語注釈:
         # config の model.model_type に応じて適切なモデルクラス名と import path を返します。
         # 今回の config で model_type='gnn' に設定されている場合は GNN 用モデルを返します。
+        # model_type='gat' の場合は GAT 用モデルを返します。
         if self._cfg.model.model_type == "conv":
             return 'StochasticMuZeroModel', ['lzero.model.stochastic_muzero_model']
         elif self._cfg.model.model_type == "mlp":
@@ -230,6 +231,9 @@ class StochasticMuZeroPolicy(MuZeroPolicy):
         elif self._cfg.model.model_type == "gnn":
             # GNN 用の実装: lzero.model.gnn_stochastic_muzero_model の中の GNNStochasticMuZeroModel が使われる
             return 'GNNStochasticMuZeroModel', ['lzero.model.gnn_stochastic_muzero_model']
+        elif self._cfg.model.model_type == "gat":
+            # GAT 用の実装: lzero.model.gat_stochastic_muzero_model の中の GATStochasticMuZeroModel が使われる
+            return 'GATStochasticMuZeroModel', ['lzero.model.gat_stochastic_muzero_model']
         else:
             raise ValueError("model type {} is not supported".format(self._cfg.model.model_type))
 

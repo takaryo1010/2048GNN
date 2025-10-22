@@ -1,382 +1,390 @@
-from typing import Optional, Tuple, Union, List
+"""
+GAT-based Stochastic MuZero Model for 2048
+Replaces CNN with Graph Attention Network (GAT) for state representation and dynamics
+
+⚠️  CNN使用ポリシー ⚠️
+==================
+このモデルは完全にGraph Attention Network (GAT)ベースです。
+
+【CNNの使用制限】
+- ✅ 許可: chance_encoderのみ（チャンスノードエンコーディング用）
+- ❌ 禁止: representation_network, dynamics_network, prediction_network
+          でのCNN使用は完全に禁止
+
+【使用されるGATコンポーネント】
+- GraphBuilder: グリッド観測をグラフ構造に変換
+- GraphAttention: グラフアテンションネットワーク（マルチヘッド）
+- GraphAttentionConv: アテンションベースのメッセージパッシング層
+
+【バリデーション】
+初期化時に自動的にCNN使用チェックが実行され、
+GAT部分でCNNが使用されている場合はRuntimeErrorが発生します。
+"""
+from typing import Optional, Tuple
 import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch_geometric
-from torch_geometric.nn import GATConv, global_mean_pool, global_max_pool
-from torch_geometric.data import Data, Batch
-from ding.torch_utils import MLP, ResBlock
+from ding.torch_utils import MLP
 from ding.utils import MODEL_REGISTRY, SequenceType
 
 from .common import MZNetworkOutput
-from .utils import renormalize, get_params_mean, get_dynamic_mean, get_reward_mean
-
-
-class GridToGraphConverter:
-    """Convert 2048 grid to graph representation for StochasticMuZero"""
-    
-    def __init__(self, grid_size: int = 4):
-        self.grid_size = grid_size
-        self.num_nodes = grid_size * grid_size
-        self.edge_index = self._create_edge_index()
-    def _create_edge_index(self):
-        """Create edge connections for grid graph (4-connectivity)"""
-        edges = []
-        
-        for i in range(self.grid_size):
-            for j in range(self.grid_size):
-                node_id = i * self.grid_size + j
-                
-                # Right neighbor
-                if j + 1 < self.grid_size:
-                    neighbor_id = i * self.grid_size + (j + 1)
-                    edges.append([node_id, neighbor_id])
-                    edges.append([neighbor_id, node_id])  # Bidirectional
-                
-                # Bottom neighbor
-                if i + 1 < self.grid_size:
-                    neighbor_id = (i + 1) * self.grid_size + j
-                    edges.append([node_id, neighbor_id])
-                    edges.append([neighbor_id, node_id])  # Bidirectional
-        
-        return torch.tensor(edges, dtype=torch.long).t().contiguous()
-    
-    def grid_to_graph(self, grid_batch):
-        """
-        Convert batch of grids to batch of graphs
-        Args:
-            grid_batch: (batch_size, channels, height, width) - encoded board representation
-        Returns:
-            PyTorch Geometric Batch object
-        """
-        batch_size = grid_batch.shape[0]
-        channels = grid_batch.shape[1]
-        device = grid_batch.device
-        
-        # Flatten spatial dimensions to create node features
-        node_features = grid_batch.permute(0, 2, 3, 1).reshape(batch_size, -1, channels)
-        
-        graphs = []
-        for i in range(batch_size):
-            graph = Data(
-                x=node_features[i],
-                edge_index=self.edge_index.clone().to(device),
-            )
-            graphs.append(graph)
-            
-        # 簡潔なデバッグ情報のみ（初回のみ）
-        if not hasattr(self, '_graph_info_shown'):
-            print(f"📊 グラフ構造: {self.grid_size}x{self.grid_size}, ノード{self.num_nodes}個, エッジ{self.edge_index.shape[1]}個")
-            self._graph_info_shown = True
-        
-        return Batch.from_data_list(graphs)
+from .gnn_utils import GraphBuilder  # Reuse GraphBuilder
+from .gat_utils import GraphAttention  # New GAT module
+from .utils import renormalize
 
 
 class GATRepresentationNetwork(nn.Module):
-    """Graph Attention Network for representation learning in StochasticMuZero"""
+    """
+    GAT-based Representation Network
+    Converts observation to latent state using Graph Attention Network instead of CNN
+    """
     
     def __init__(
         self,
-        grid_size: int = 4,
-        input_channels: int = 16,
-        hidden_channels: int = 64,
+        observation_shape: SequenceType = (16, 4, 4),
+        num_channels: int = 128,
+        num_gnn_layers: int = 3,
         num_heads: int = 4,
-        num_layers: int = 3,
-        output_dim: int = 256,
-        dropout: float = 0.1,
+        grid_size: int = 4,
+        include_row_col_edges: bool = True,
+        dropout: float = 0.0,
+        edge_mode: str = 'sparse',
     ):
-        super().__init__()
-        print(f"\n🔧 GATRepresentationNetwork 初期化開始")
-        print(f"  - グリッドサイズ: {grid_size}x{grid_size}")
-        print(f"  - 入力チャンネル: {input_channels}")
-        print(f"  - 隠れチャンネル: {hidden_channels}")
-        print(f"  - アテンションヘッド数: {num_heads}")
-        print(f"  - GAT層数: {num_layers}")
-        print(f"  - 出力次元: {output_dim}")
-        print(f"  - ドロップアウト率: {dropout}")
-        
-        self.grid_size = grid_size
-        self.converter = GridToGraphConverter(grid_size)
-        
-        # Input projection
-        self.input_proj = nn.Linear(input_channels, hidden_channels)
-        print(f"✓ 入力射影層: {input_channels} → {hidden_channels}")
-        
-        # GAT layers
-        self.gat_layers = nn.ModuleList()
-        for i in range(num_layers):
-            if i == 0:
-                in_channels = hidden_channels
-            else:
-                in_channels = hidden_channels * num_heads
-            
-            gat_layer = GATConv(
-                in_channels=in_channels,
-                out_channels=hidden_channels,
-                heads=num_heads,
-                dropout=dropout,
-                concat=(i < num_layers - 1)
-            )
-            self.gat_layers.append(gat_layer)
-            print(f"✓ GAT層{i+1}: {in_channels} → {hidden_channels} (ヘッド数: {num_heads})")
-        
-        # Output projection
-        final_dim = hidden_channels
-        self.output_proj = MLP(
-            in_channels=final_dim,
-            hidden_channels=output_dim // 2,
-            out_channels=output_dim,
-            layer_num=2,
-            activation=nn.ReLU(),
-            norm_type='LN'
-        )
-        print(f"✓ 出力射影層: {final_dim} → {output_dim}")
-        
-        self.activation = nn.ReLU()
-        self.dropout = nn.Dropout(dropout)
-        print(f"🔧 GATRepresentationNetwork 初期化完了\n")
-    
-    def forward(self, x):
         """
         Args:
-            x: tensor (batch_size, channels, height, width) - encoded board representation
-        Returns:
-            (batch_size, output_dim) - graph-level representation
+            observation_shape: Shape of observation [C, H, W]
+            num_channels: Hidden dimension per head for GAT
+            num_gnn_layers: Number of GAT layers
+            num_heads: Number of attention heads
+            grid_size: Grid size (4 for 4x4)
+            include_row_col_edges: Whether to include row/column edges
+            dropout: Dropout rate
+            edge_mode: Edge connectivity - 'adjacent', 'sparse', or 'full'
         """
-        # 簡潔なデバッグ（初回のみ）
-        if not hasattr(self, '_forward_count'):
-            print(f"🚀 GATRepresentationNetwork 初回Forward: {x.shape}")
-            self._forward_count = 0
-        
-        self._forward_count += 1
-        # if self._forward_count % 100 == 0:  # 100回ごとに1回だけ
-            # print(f"🚀 GAT Forward #{self._forward_count}: {x.shape}")
-        
-        # Ensure correct dtype
-        if x.dtype != torch.float32:
-            x = x.float()
-        
-        result = self._process_tensor_input(x)
-        return result
-    
-    def _process_tensor_input(self, x):
-        """Process tensor input by converting to graph and applying GAT"""
-        # 詳細ログは初回のみ
-        show_details = not hasattr(self, '_details_shown')
-        if show_details:
-            print(f"  📊 グラフ変換とGAT処理開始")
-            self._details_shown = True
-        
-        # Convert grid to graph
-        graph_batch = self.converter.grid_to_graph(x)
-        
-        if show_details:
-            print(f"    - グラフ作成完了: {graph_batch.x.shape[0]}ノード, {graph_batch.x.shape[1]}特徴")
-    
-        # Input projection
-        h = self.input_proj(graph_batch.x)
-        h = self.activation(h)
-        
-        # Apply GAT layers
-        for i, gat_layer in enumerate(self.gat_layers):
-            h = gat_layer(h, graph_batch.edge_index)
-            if i < len(self.gat_layers) - 1:
-                h = self.activation(h)
-                h = self.dropout(h)
-        
-        # Global pooling to get graph-level representation
-        graph_repr = global_mean_pool(h, graph_batch.batch)
-        
-        # Final projection
-        output = self.output_proj(graph_repr)
-        
-        if show_details:
-            print(f"    - 最終出力: {output.shape}")
-            print(f"  📊 グラフ変換とGAT処理完了")
-        
-        return output
-
-
-class GATChanceEncoder(nn.Module):
-    """GAT-based chance encoder for StochasticMuZero"""
-    
-    def __init__(
-        self,
-        grid_size: int = 4,
-        chance_space_size: int = 32,
-        hidden_channels: int = 64,
-        num_heads: int = 4,
-        num_layers: int = 2,
-        output_dim: int = 256,
-        dropout: float = 0.1,
-    ):
         super().__init__()
-        print(f"\n🎲 GATChanceEncoder 初期化開始")
-        print(f"  - チャンス空間サイズ: {chance_space_size}")
-        print(f"  - GAT設定: {num_heads}ヘッド, {hidden_channels}隠れ, {num_layers}層")
-        
+        self.observation_shape = observation_shape
+        self.num_channels = num_channels
         self.grid_size = grid_size
-        self.chance_space_size = chance_space_size
         
-        # Chance embedding
-        self.chance_embedding = nn.Embedding(chance_space_size, hidden_channels)
-        print(f"✓ チャンス埋め込み: {chance_space_size} → {hidden_channels}")
+        # Graph builder with optimized edge mode (same as GNN)
+        self.graph_builder = GraphBuilder(grid_size, include_row_col_edges, edge_mode)
         
-        # GAT for chance processing
-        # GAT representation network for chance-conditioned state
-        # Input will be state (16 channels) + chance features (16 channels) = 32 channels
-        self.gat_chance = GATRepresentationNetwork(
-            grid_size=grid_size,
-            input_channels=32,  # state channels (16) + chance channels (16)
-            hidden_channels=hidden_channels,
+        # Input dimension: observation channels + 2 (positional encoding)
+        in_dim = observation_shape[0] + 2
+        
+        # GAT encoder with multi-head attention
+        self.gat = GraphAttention(
+            in_dim=in_dim,
+            hidden_dim=num_channels,
+            num_layers=num_gnn_layers,
             num_heads=num_heads,
-            num_layers=num_layers,
-            output_dim=output_dim,
-            dropout=dropout
+            dropout=dropout,
+            use_bn=True
         )
-        
-        # Chance fusion
-        self.chance_fusion = MLP(
-            in_channels=output_dim + hidden_channels,
-            hidden_channels=output_dim,
-            out_channels=output_dim,
-            layer_num=2,
-            activation=nn.ReLU(),
-            norm_type='LN'
-        )
-        print(f"🎲 GATChanceEncoder 初期化完了\n")
     
-    def forward(self, state, chance):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            state: (batch_size, channels, height, width) - current state
-            chance: (batch_size,) - chance variable
+            x: Observation [B, C, H, W]
+        
         Returns:
-            (batch_size, output_dim) - chance-conditioned state representation
+            latent_state: [B, num_channels, H, W] to maintain compatibility with existing code
         """
-        # 簡潔なデバッグ（初回のみ）
-        if not hasattr(self, '_chance_count'):
-            # print(f"🎲 GATChanceEncoder 初回Forward: state{state.shape}, chance{chance.shape}")
-            self._chance_count = 0
+        batch_size = x.size(0)
         
-        self._chance_count += 1
+        # Convert observation to graph representation
+        node_features, edge_index = self.graph_builder.obs_to_graph(x)
         
-        # Ensure chance is integer type for embedding
-        if chance.dtype in [torch.float32, torch.float64]:
-            chance = chance.long()
+        # Apply GAT
+        node_embeddings = self.gat(node_features, edge_index)
         
-        # Encode chance
-        chance_embed = self.chance_embedding(chance)
-        
-        # Expand chance embedding to spatial dimensions
-        batch_size = state.shape[0]
-        chance_spatial = chance_embed.unsqueeze(-1).unsqueeze(-1).expand(
-            batch_size, -1, self.grid_size, self.grid_size
+        # Reshape node embeddings to grid format
+        latent_state = node_embeddings.transpose(1, 2).reshape(
+            batch_size, self.num_channels, self.grid_size, self.grid_size
         )
         
-        # Concatenate with state (ensure total channels match expectation)
-        # We need to make total channels = 32 (expected by gat_chance)
-        # state has 16 channels, so we need 16 more from chance
-        chance_reduced = chance_spatial[:, :16]  # Take 16 channels from chance
-        
-        state_chance = torch.cat([state, chance_reduced], dim=1)
-        
-        # Process through GAT
-        state_repr = self.gat_chance(state_chance)
-        
-        # Fuse with global chance representation
-        fused = torch.cat([state_repr, chance_embed], dim=-1)
-        output = self.chance_fusion(fused)
-        
-        # if self._chance_count % 50 == 0:  # 50回ごとに1回だけ
-        #     # print(f"🎲 ChanceEncoder #{self._chance_count}: {output.shape}")
-        
-        return output
+        return latent_state
 
 
-class GATAfterstateDynamicsNetwork(nn.Module):
-    """GAT-based afterstate dynamics network for StochasticMuZero"""
+class GATValueHead(nn.Module):
+    """
+    GAT-based Value Head
+    Aggregates node embeddings and predicts value
+    """
     
     def __init__(
         self,
-        grid_size: int = 4,
-        state_dim: int = 256,
-        action_space_size: int = 4,
-        hidden_channels: int = 64,
-        num_heads: int = 4,
-        num_layers: int = 2,
-        dropout: float = 0.1,
+        num_channels: int,
+        value_support_size: int,
+        hidden_channels: SequenceType = [128, 64],
+        last_linear_layer_init_zero: bool = True,
     ):
         super().__init__()
-        self.action_space_size = action_space_size
-        self.state_dim = state_dim
-        self.grid_size = grid_size
+        self.num_channels = num_channels
         
-        # Action encoding
-        self.action_embedding = nn.Embedding(action_space_size, state_dim // 4)
+        # Multiple aggregations: mean, max, sum
+        aggregated_dim = num_channels * 3
         
-        # State-action fusion
-        fusion_dim = state_dim + state_dim // 4
-        self.state_action_fusion = MLP(
-            in_channels=fusion_dim,
-            hidden_channels=hidden_channels * 2,
-            out_channels=state_dim,
-            layer_num=3,
-            activation=nn.ReLU(),
-            norm_type='LN'
-        )
+        # MLP for value prediction
+        layers = []
+        dims = [aggregated_dim] + list(hidden_channels) + [value_support_size]
+        for i in range(len(dims) - 1):
+            layers.append(nn.Linear(dims[i], dims[i+1]))
+            if i < len(dims) - 2:
+                layers.append(nn.ReLU())
         
-        # Convert to grid for GAT processing
-        self.to_grid_proj = nn.Linear(state_dim, grid_size * grid_size * 16)
+        self.mlp = nn.Sequential(*layers)
         
-        # GAT for afterstate dynamics
-        self.gat_afterstate = GATRepresentationNetwork(
-            grid_size=grid_size,
-            input_channels=16,
-            hidden_channels=hidden_channels,
-            num_heads=num_heads,
-            num_layers=num_layers,
-            output_dim=state_dim,
-            dropout=dropout
-        )
+        # Initialize last layer to zero if requested
+        if last_linear_layer_init_zero:
+            nn.init.constant_(self.mlp[-1].weight, 0)
+            nn.init.constant_(self.mlp[-1].bias, 0)
     
-    def forward(self, state, action):
+    def forward(self, latent_state: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            state: (batch_size, state_dim)
-            action: (batch_size,) - discrete actions
+            latent_state: [B, C, H, W]
+        
         Returns:
-            afterstate: (batch_size, state_dim) - deterministic afterstate
+            value: [B, value_support_size]
         """
-        # Encode action
-        action_embed = self.action_embedding(action)
+        batch_size = latent_state.size(0)
         
-        # Ensure proper dimensions
-        if state.dim() > 2:
-            state = state.view(state.size(0), -1)
-        if action_embed.dim() > 2:
-            action_embed = action_embed.view(action_embed.size(0), -1)
+        # Flatten spatial dimensions: [B, C, H, W] -> [B, C, H*W] -> [B, H*W, C]
+        node_emb = latent_state.flatten(2).transpose(1, 2)  # [B, N, C]
         
-        # Fuse state and action
-        state_action = torch.cat([state, action_embed], dim=-1)
-        fused = self.state_action_fusion(state_action)
+        # Aggregate across nodes
+        mean_pool = node_emb.mean(dim=1)  # [B, C]
+        max_pool = node_emb.max(dim=1)[0]  # [B, C]
+        sum_pool = node_emb.sum(dim=1)  # [B, C]
         
-        # Convert to grid representation
-        grid_repr = self.to_grid_proj(fused)
-        grid_repr = grid_repr.view(-1, 16, self.grid_size, self.grid_size)
+        # Concatenate aggregations
+        aggregated = torch.cat([mean_pool, max_pool, sum_pool], dim=-1)  # [B, 3*C]
         
-        # Apply GAT dynamics
-        afterstate = self.gat_afterstate(grid_repr)
+        # Predict value
+        value = self.mlp(aggregated)  # [B, value_support_size]
         
-        return afterstate
+        return value
+
+
+class GATPolicyHead(nn.Module):
+    """
+    GAT-based Policy Head
+    Predicts action probabilities from node embeddings
+    """
+    
+    def __init__(
+        self,
+        num_channels: int,
+        action_space_size: int,
+        hidden_channels: SequenceType = [128, 64],
+        last_linear_layer_init_zero: bool = True,
+    ):
+        super().__init__()
+        self.num_channels = num_channels
+        
+        # Multiple aggregations
+        aggregated_dim = num_channels * 3
+        
+        # MLP for policy prediction
+        layers = []
+        dims = [aggregated_dim] + list(hidden_channels) + [action_space_size]
+        for i in range(len(dims) - 1):
+            layers.append(nn.Linear(dims[i], dims[i+1]))
+            if i < len(dims) - 2:
+                layers.append(nn.ReLU())
+        
+        self.mlp = nn.Sequential(*layers)
+        
+        if last_linear_layer_init_zero:
+            nn.init.constant_(self.mlp[-1].weight, 0)
+            nn.init.constant_(self.mlp[-1].bias, 0)
+    
+    def forward(self, latent_state: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            latent_state: [B, C, H, W]
+        
+        Returns:
+            policy_logits: [B, action_space_size]
+        """
+        # Flatten spatial: [B, C, H*W] -> [B, H*W, C]
+        node_emb = latent_state.flatten(2).transpose(1, 2)
+        
+        # Aggregate
+        mean_pool = node_emb.mean(dim=1)
+        max_pool = node_emb.max(dim=1)[0]
+        sum_pool = node_emb.sum(dim=1)
+        aggregated = torch.cat([mean_pool, max_pool, sum_pool], dim=-1)
+        
+        # Predict policy
+        policy_logits = self.mlp(aggregated)
+        
+        return policy_logits
+
+
+class GATPredictionNetwork(nn.Module):
+    """
+    GAT-based Prediction Network
+    Combines value and policy heads
+    """
+    
+    def __init__(
+        self,
+        num_channels: int,
+        action_space_size: int,
+        value_support_size: int,
+        value_head_hidden_channels: SequenceType = [128, 64],
+        policy_head_hidden_channels: SequenceType = [128, 64],
+        last_linear_layer_init_zero: bool = True,
+    ):
+        super().__init__()
+        
+        self.value_head = GATValueHead(
+            num_channels,
+            value_support_size,
+            value_head_hidden_channels,
+            last_linear_layer_init_zero
+        )
+        
+        self.policy_head = GATPolicyHead(
+            num_channels,
+            action_space_size,
+            policy_head_hidden_channels,
+            last_linear_layer_init_zero
+        )
+    
+    def forward(self, latent_state: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Args:
+            latent_state: [B, C, H, W]
+        
+        Returns:
+            policy_logits: [B, action_space_size]
+            value: [B, value_support_size]
+        """
+        value = self.value_head(latent_state)
+        policy_logits = self.policy_head(latent_state)
+        
+        return policy_logits, value
+
+
+class GATDynamicsNetwork(nn.Module):
+    """
+    GAT-based Dynamics Network
+    Predicts next latent state and reward given current state and action
+    """
+    
+    def __init__(
+        self,
+        num_channels: int,
+        action_space_size: int,
+        reward_support_size: int,
+        num_gnn_layers: int = 3,
+        num_heads: int = 4,
+        grid_size: int = 4,
+        reward_head_hidden_channels: SequenceType = [128, 64],
+        last_linear_layer_init_zero: bool = True,
+        include_row_col_edges: bool = True,
+        edge_mode: str = 'sparse',
+    ):
+        super().__init__()
+        self.num_channels = num_channels
+        self.grid_size = grid_size
+        self.num_nodes = grid_size * grid_size
+        
+        # Graph builder with optimized edge mode
+        self.graph_builder = GraphBuilder(grid_size, include_row_col_edges, edge_mode)
+        
+        # Action encoding: broadcast action to all nodes
+        self.action_encoder = nn.Linear(action_space_size, num_channels)
+        
+        # GAT to predict next state
+        self.gat = GraphAttention(
+            in_dim=num_channels * 2,  # state + encoded action
+            hidden_dim=num_channels,
+            num_layers=num_gnn_layers,
+            num_heads=num_heads,
+            dropout=0.0,
+            use_bn=True
+        )
+        
+        # Reward head (similar to value head)
+        aggregated_dim = num_channels * 3
+        layers = []
+        dims = [aggregated_dim] + list(reward_head_hidden_channels) + [reward_support_size]
+        for i in range(len(dims) - 1):
+            layers.append(nn.Linear(dims[i], dims[i+1]))
+            if i < len(dims) - 2:
+                layers.append(nn.ReLU())
+        
+        self.reward_head = nn.Sequential(*layers)
+        
+        if last_linear_layer_init_zero:
+            nn.init.constant_(self.reward_head[-1].weight, 0)
+            nn.init.constant_(self.reward_head[-1].bias, 0)
+    
+    def forward(self, latent_state: torch.Tensor, action: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Args:
+            latent_state: [B, C, H, W]
+            action: [B, A] one-hot encoded action
+        
+        Returns:
+            next_latent_state: [B, C, H, W]
+            reward: [B, reward_support_size]
+        """
+        batch_size = latent_state.size(0)
+        
+        # Convert latent state to node features: [B, C, H, W] -> [B, H*W, C]
+        node_features = latent_state.flatten(2).transpose(1, 2)  # [B, N, C]
+        
+        # Encode action and broadcast to all nodes
+        # Handle both one-hot encoded and index-based actions
+        if action.dim() == 1 or (action.dim() == 2 and action.size(1) == 1):
+            # Action is index-based, convert to one-hot
+            if action.dim() == 2:
+                action = action.squeeze(-1)
+            # Determine action space size from encoder input size
+            action_space_size = self.action_encoder.in_features
+            # Clamp action indices to valid range
+            action = action.long().clamp(0, action_space_size - 1)
+            action = F.one_hot(action, num_classes=action_space_size).float()
+        elif action.dtype != torch.float32:
+            action = action.float()
+        action_emb = self.action_encoder(action)  # [B, C]
+        action_emb = action_emb.unsqueeze(1).expand(-1, self.num_nodes, -1)  # [B, N, C]
+        
+        # Concatenate state and action
+        node_features = torch.cat([node_features, action_emb], dim=-1)  # [B, N, 2*C]
+        
+        # Get edge index
+        edge_index = self.graph_builder.edge_index.to(latent_state.device)
+        
+        # Apply GAT to predict next state
+        next_node_features = self.gat(node_features, edge_index)  # [B, N, C]
+        
+        # Reshape back to grid
+        next_latent_state = next_node_features.transpose(1, 2).reshape(
+            batch_size, self.num_channels, self.grid_size, self.grid_size
+        )
+        
+        # Predict reward using aggregated features
+        mean_pool = next_node_features.mean(dim=1)
+        max_pool = next_node_features.max(dim=1)[0]
+        sum_pool = next_node_features.sum(dim=1)
+        aggregated = torch.cat([mean_pool, max_pool, sum_pool], dim=-1)
+        reward = self.reward_head(aggregated)
+        
+        return next_latent_state, reward
 
 
 @MODEL_REGISTRY.register('GATStochasticMuZeroModel')
 class GATStochasticMuZeroModel(nn.Module):
     """
-    StochasticMuZero model using Graph Attention Networks for 2048 game
-    Supports both 3x3 and 4x4 board sizes with stochastic environment modeling
+    GAT-based Stochastic MuZero Model for 2048
+    Replaces CNN-based components with GAT (Graph Attention Network)
     """
     
     def __init__(
@@ -384,52 +392,56 @@ class GATStochasticMuZeroModel(nn.Module):
         observation_shape: SequenceType = (16, 4, 4),
         action_space_size: int = 4,
         chance_space_size: int = 32,
+        num_channels: int = 128,
+        num_gnn_layers: int = 3,
         num_heads: int = 4,
-        hidden_channels: int = 64,
-        num_gat_layers: int = 3,
-        state_dim: int = 256,
-        value_head_channels: int = 16,
-        policy_head_channels: int = 16,
-        value_head_hidden_channels: SequenceType = [32],
-        policy_head_hidden_channels: SequenceType = [32],
+        grid_size: int = 4,
+        value_head_hidden_channels: SequenceType = [128, 64],
+        policy_head_hidden_channels: SequenceType = [128, 64],
+        reward_head_hidden_channels: SequenceType = [128, 64],
         reward_support_size: int = 601,
         value_support_size: int = 601,
         categorical_distribution: bool = True,
         last_linear_layer_init_zero: bool = True,
-        state_norm: bool = False,
-        dropout: float = 0.1,
+        include_row_col_edges: bool = True,
+        dropout: float = 0.0,
+        # SSL parameters (if needed in future)
+        self_supervised_learning_loss: bool = False,
+        proj_hid: int = 1024,
+        proj_out: int = 1024,
+        pred_hid: int = 512,
+        pred_out: int = 1024,
         *args,
         **kwargs
     ):
-        print("\n" + "="*80)
-        print("🏗️  GATStochasticMuZeroModel 初期化開始")
-        print("="*80)
+        """
+        Args:
+            observation_shape: Observation shape [C, H, W]
+            action_space_size: Number of actions (4 for 2048)
+            chance_space_size: Number of chance outcomes
+            num_channels: Hidden dimension per head for GAT
+            num_gnn_layers: Number of GAT layers
+            num_heads: Number of attention heads
+            grid_size: Grid size (4 for 4x4)
+            value_head_hidden_channels: Hidden layers for value head
+            policy_head_hidden_channels: Hidden layers for policy head
+            reward_head_hidden_channels: Hidden layers for reward head
+            reward_support_size: Support size for categorical reward
+            value_support_size: Support size for categorical value
+            categorical_distribution: Whether to use categorical distribution
+            last_linear_layer_init_zero: Zero init for last layer
+            include_row_col_edges: Whether to include row/column edges in graph
+            dropout: Dropout rate
+            self_supervised_learning_loss: Whether to use SSL (future feature)
+        """
         super().__init__()
         
-        # Determine grid size from observation shape
-        self.grid_size = observation_shape[-1]
-        assert self.grid_size in [3, 4], f"Only 3x3 and 4x4 grids supported, got {self.grid_size}x{self.grid_size}"
-        
-        print(f"✓ モデル基本設定:")
-        print(f"  - 観測形状: {observation_shape}")
-        print(f"  - グリッドサイズ: {self.grid_size}x{self.grid_size}")
-        print(f"  - アクション空間サイズ: {action_space_size}")
-        print(f"  - チャンス空間サイズ: {chance_space_size}")
-        print(f"  - 状態次元: {state_dim}")
-        print(f"✓ GAT設定:")
-        print(f"  - アテンションヘッド数: {num_heads}")
-        print(f"  - 隠れチャンネル数: {hidden_channels}")
-        print(f"  - GAT層数: {num_gat_layers}")
-        print(f"  - ドロップアウト率: {dropout}")
-        print(f"✓ その他設定:")
-        print(f"  - カテゴリ分布: {categorical_distribution}")
-        print(f"  - 状態正規化: {state_norm}")
-        
+        self.observation_shape = observation_shape
         self.action_space_size = action_space_size
         self.chance_space_size = chance_space_size
-        self.state_dim = state_dim
+        self.num_channels = num_channels
         self.categorical_distribution = categorical_distribution
-        self.state_norm = state_norm
+        self.self_supervised_learning_loss = self_supervised_learning_loss
         
         if categorical_distribution:
             self.reward_support_size = reward_support_size
@@ -438,433 +450,234 @@ class GATStochasticMuZeroModel(nn.Module):
             self.reward_support_size = 1
             self.value_support_size = 1
         
-        print(f"✓ サポートサイズ: reward={self.reward_support_size}, value={self.value_support_size}")
-        print("-" * 50)
+        # Determine optimal edge mode (sparse for good balance of speed/accuracy)
+        edge_mode = kwargs.get('edge_mode', 'sparse')
         
-        # Representation network (encoder)
-        print(f"🌐 表現ネットワーク (GATRepresentationNetwork) 初期化中...")
+        # Representation Network (GAT-based)
         self.representation_network = GATRepresentationNetwork(
-            grid_size=self.grid_size,
-            input_channels=observation_shape[0],
-            hidden_channels=hidden_channels,
+            observation_shape=observation_shape,
+            num_channels=num_channels,
+            num_gnn_layers=num_gnn_layers,
             num_heads=num_heads,
-            num_layers=num_gat_layers,
-            output_dim=state_dim,
-            dropout=dropout
+            grid_size=grid_size,
+            include_row_col_edges=include_row_col_edges,
+            dropout=dropout,
+            edge_mode=edge_mode,
         )
         
-        # Afterstate dynamics network (deterministic)
-        print(f"⚡ アフター状態ダイナミクスネットワーク (GATAfterstateDynamicsNetwork) 初期化中...")
-        self.afterstate_dynamics_network = GATAfterstateDynamicsNetwork(
-            grid_size=self.grid_size,
-            state_dim=state_dim,
+        # Prediction Network (GAT-based)
+        self.prediction_network = GATPredictionNetwork(
+            num_channels=num_channels,
             action_space_size=action_space_size,
-            hidden_channels=hidden_channels,
+            value_support_size=self.value_support_size,
+            value_head_hidden_channels=value_head_hidden_channels,
+            policy_head_hidden_channels=policy_head_hidden_channels,
+            last_linear_layer_init_zero=last_linear_layer_init_zero,
+        )
+        
+        # Dynamics Network (GAT-based)
+        self.dynamics_network = GATDynamicsNetwork(
+            num_channels=num_channels,
+            action_space_size=action_space_size,
+            reward_support_size=self.reward_support_size,
+            num_gnn_layers=num_gnn_layers,
             num_heads=num_heads,
-            num_layers=num_gat_layers - 1,
-            dropout=dropout
+            grid_size=grid_size,
+            edge_mode=edge_mode,
+            reward_head_hidden_channels=reward_head_hidden_channels,
+            last_linear_layer_init_zero=last_linear_layer_init_zero,
+            include_row_col_edges=include_row_col_edges,
         )
         
-        # Chance encoder (stochastic)
-        print(f"🎲 チャンスエンコーダー (GATChanceEncoder) 初期化中...")
-        self.chance_encoder = GATChanceEncoder(
-            grid_size=self.grid_size,
-            chance_space_size=chance_space_size,
-            hidden_channels=hidden_channels,
+        # Afterstate networks (for Stochastic MuZero)
+        self.afterstate_dynamics_network = GATDynamicsNetwork(
+            num_channels=num_channels,
+            action_space_size=chance_space_size,  # Use chance space for afterstate
+            reward_support_size=self.reward_support_size,
+            num_gnn_layers=num_gnn_layers,
             num_heads=num_heads,
-            num_layers=num_gat_layers - 1,
-            output_dim=state_dim,
-            dropout=dropout
+            grid_size=grid_size,
+            reward_head_hidden_channels=reward_head_hidden_channels,
+            last_linear_layer_init_zero=last_linear_layer_init_zero,
+            include_row_col_edges=include_row_col_edges,
         )
         
-        # Projection layer for converting state_dim to grid representation
-        grid_representation_size = 16 * self.grid_size * self.grid_size
-        self.state_to_grid_projection = nn.Linear(state_dim, grid_representation_size)
-        print(f"📐 状態→グリッド投影層: {state_dim} → {grid_representation_size} (16×{self.grid_size}×{self.grid_size})")
-        
-        # Reward prediction from afterstate
-        self.reward_head_afterstate = MLP(
-            in_channels=state_dim,
-            hidden_channels=value_head_hidden_channels[0],
-            out_channels=self.reward_support_size,
-            layer_num=len(value_head_hidden_channels) + 1,
-            activation=nn.ReLU(),
-            norm_type='LN',
-            output_activation=False,
-            output_norm=False,
-            last_linear_layer_init_zero=last_linear_layer_init_zero
+        self.afterstate_prediction_network = GATPredictionNetwork(
+            num_channels=num_channels,
+            action_space_size=chance_space_size,  # Predict chance distribution
+            value_support_size=self.value_support_size,
+            value_head_hidden_channels=value_head_hidden_channels,
+            policy_head_hidden_channels=policy_head_hidden_channels,
+            last_linear_layer_init_zero=last_linear_layer_init_zero,
         )
         
-        # Value and policy heads
-        print(f"🎯 価値・方策ヘッド初期化中...")
-        self.value_head = MLP(
-            in_channels=state_dim,
-            hidden_channels=value_head_hidden_channels[0],
-            out_channels=self.value_support_size,
-            layer_num=len(value_head_hidden_channels) + 1,
-            activation=nn.ReLU(),
-            norm_type='LN',
-            output_activation=False,
-            output_norm=False,
-            last_linear_layer_init_zero=last_linear_layer_init_zero
+        # Chance encoder - needs to match ChanceEncoder interface from stochastic_muzero_model.py
+        from .stochastic_muzero_model import ChanceEncoder
+        self.chance_encoder = ChanceEncoder(
+            observation_shape, chance_space_size, encoder_backbone_type='conv'
         )
-        print(f"✓ 価値ヘッド: {state_dim} → {self.value_support_size}")
         
-        self.policy_head = MLP(
-            in_channels=state_dim,
-            hidden_channels=policy_head_hidden_channels[0],
-            out_channels=action_space_size,
-            layer_num=len(policy_head_hidden_channels) + 1,
-            activation=nn.ReLU(),
-            norm_type='LN',
-            output_activation=False,
-            output_norm=False,
-            last_linear_layer_init_zero=last_linear_layer_init_zero
-        )
-        print(f"✓ 方策ヘッド: {state_dim} → {action_space_size}")
-        
-        # Afterstate policy head for chance prediction
-        self.afterstate_policy_head = MLP(
-            in_channels=state_dim,
-            hidden_channels=policy_head_hidden_channels[0],
-            out_channels=chance_space_size,
-            layer_num=len(policy_head_hidden_channels) + 1,
-            activation=nn.ReLU(),
-            norm_type='LN',
-            output_activation=False,
-            output_norm=False,
-            last_linear_layer_init_zero=last_linear_layer_init_zero
-        )
-        print(f"✓ アフター状態方策ヘッド: {state_dim} → {chance_space_size}")
-        
-        print("="*80)
-        print("🎉 GATStochasticMuZeroModel 初期化完了！")
-        print("="*80)
-        print("✓ Graph Attention Network (GAT) が正常に組み込まれました")
-        print("✓ StochasticMuZero アーキテクチャが構築されました")
-        print("✓ 2048ゲーム用の設定が適用されました")
-        print("="*80 + "\n")
+        # CNN使用を防止するバリデーション
+        self._validate_no_cnn_in_gat_components()
     
-    def initial_inference(self, observation):
-        """Initial inference for MCTS"""
-        # 簡潔なデバッグ（初回のみ）
-        if not hasattr(self, '_initial_count'):
-            print(f"🎯 Initial Inference 開始: {observation.shape}")
-            self._initial_count = 0
+    def _validate_no_cnn_in_gat_components(self):
+        """
+        GAT部分（representation, dynamics）にCNNが使われていないことを確認
+        chance_encoderのCNNは除外（チャンスノード用として許可）
         
-        self._initial_count += 1
+        このメソッドは初期化時に呼ばれ、GATモデルが誤ってCNNコンポーネントを
+        使用しないことを保証します。
+        """
+        prohibited_cnn_types = ['Conv2d', 'ResBlock', 'BatchNorm2d']
         
-        batch_size = observation.shape[0]
-        device = observation.device
+        for name, module in self.named_modules():
+            module_type = type(module).__name__
+            
+            # chance_encoder以外でCNNレイヤーを検出
+            if 'chance_encoder' not in name:
+                if any(cnn_type in module_type for cnn_type in prohibited_cnn_types):
+                    raise RuntimeError(
+                        f"❌ GAT部分でCNNレイヤーが検出されました！\n"
+                        f"   検出場所: {name}\n"
+                        f"   レイヤータイプ: {module_type}\n"
+                        f"   このモデルはGraph Attention Network (GAT)ベースです。\n"
+                        f"   CNNレイヤー（Conv2d, ResBlock, BatchNorm2d）の使用は禁止されています。\n"
+                        f"   例外: chance_encoderのみCNNが許可されています。"
+                    )
         
-        # Encode observation to latent state
-        latent_state = self._representation(observation)
+        # GATコンポーネントの存在確認
+        has_graphattention = False
+        has_gat_repr = False
+        has_gat_dyn = False
         
-        # Predict value and policy
-        value, policy_logits = self._prediction(latent_state)
+        for name, module in self.named_modules():
+            module_type = type(module).__name__
+            if 'GraphAttention' in module_type:
+                has_graphattention = True
+            if 'GATRepresentationNetwork' in module_type:
+                has_gat_repr = True
+            if 'GATDynamicsNetwork' in module_type:
+                has_gat_dyn = True  # Fixed: was False
         
-        # Return zero reward for initial inference
-        if self.categorical_distribution:
-            if not self.training:
-                reward = [0. for _ in range(batch_size)]
-            else:
-                reward = torch.zeros(batch_size, self.reward_support_size).to(device)
-        else:
-            reward = [0. for _ in range(batch_size)]
+        if not (has_graphattention and has_gat_repr and has_gat_dyn):
+            raise RuntimeError(
+                f"❌ 必須GATコンポーネントが見つかりません！\n"
+                f"   GraphAttention: {'✅' if has_graphattention else '❌'}\n"
+                f"   GATRepresentationNetwork: {'✅' if has_gat_repr else '❌'}\n"
+                f"   GATDynamicsNetwork: {'✅' if has_gat_dyn else '❌'}\n"
+                f"   このモデルは完全にGATベースである必要があります。"
+            )
+    
+    def chance_encode(self, observation: torch.Tensor):
+        """
+        Encode observation to chance outcome distribution
         
-        if self._initial_count % 25 == 0:  # 25回ごとに1回だけ
-            print(f"🎯 Initial #{self._initial_count}: latent{latent_state.shape}")
+        Args:
+            observation: [B, C, H, W]
+        
+        Returns:
+            chance_encoding: [B, chance_space_size]
+            chance_onehot: [B, chance_space_size] one-hot encoded
+        """
+        output = self.chance_encoder(observation)
+        return output
+    
+    def initial_inference(self, obs: torch.Tensor) -> MZNetworkOutput:
+        """
+        Initial inference: obs -> latent_state -> value, policy
+        
+        Args:
+            obs: [B, C, H, W]
+        
+        Returns:
+            MZNetworkOutput with value, reward, policy_logits, latent_state
+        """
+        batch_size = obs.size(0)
+        latent_state = self._representation(obs)
+        policy_logits, value = self._prediction(latent_state)
         
         return MZNetworkOutput(
             value=value,
-            reward=reward,
+            reward=[0.0 for _ in range(batch_size)],
             policy_logits=policy_logits,
-            latent_state=latent_state
+            latent_state=latent_state,
         )
     
-    def recurrent_inference(self, state: torch.Tensor, option: torch.Tensor, afterstate: bool = False):
+    def recurrent_inference(
+        self,
+        state: torch.Tensor,
+        option: torch.Tensor,
+        afterstate: bool = False
+    ) -> MZNetworkOutput:
         """
-        Recurrent inference for MCTS expansion with afterstate support
+        Recurrent inference: state + option -> next_state, reward, value, policy
+        
         Args:
-            state: latent state or afterstate
-            option: action or chance  
-            afterstate: whether state is afterstate
+            state: [B, C, H, W] - latent_state or afterstate
+            option: [B] or [B, A] - action or chance
+            afterstate: Whether current state is afterstate
+        
+        Returns:
+            MZNetworkOutput
+        
+        Notes:
+            - afterstate=False: state is latent_state, option is action
+              -> use dynamics_network to get afterstate, then afterstate_prediction_network
+              -> policy_logits has chance_space_size dimensions
+            - afterstate=True: state is afterstate, option is chance
+              -> use afterstate_dynamics_network to get next_latent_state, then prediction_network
+              -> policy_logits has action_space_size dimensions
         """
         if afterstate:
             # state is afterstate, option is chance
-            next_latent_state = self._chance_encoding(state, option)
-            reward = self._afterstate_reward(state)  # Reward comes from afterstate
-            value, policy_logits = self._prediction(next_latent_state)
-            
-            return MZNetworkOutput(
-                value=value,
-                reward=reward,
-                policy_logits=policy_logits,
-                latent_state=next_latent_state
-            )
+            # afterstate + chance -> next_latent_state
+            next_latent_state, reward = self.afterstate_dynamics_network(state, option)
+            # predict action distribution from next_latent_state
+            policy_logits, value = self.prediction_network(next_latent_state)
+            return MZNetworkOutput(value, reward, policy_logits, next_latent_state)
         else:
             # state is latent_state, option is action
-            afterstate = self._afterstate_dynamics(state, option)
-            reward = self._afterstate_reward(afterstate)
-            value, policy_logits = self._afterstate_prediction(afterstate)  # Use afterstate prediction
-            
-            return MZNetworkOutput(
-                value=value,
-                reward=reward,
-                policy_logits=policy_logits,
-                latent_state=afterstate  # Return afterstate as the next state
-            )
+            # latent_state + action -> afterstate
+            next_afterstate, reward = self.dynamics_network(state, option)
+            # predict chance distribution from afterstate
+            policy_logits, value = self.afterstate_prediction_network(next_afterstate)
+            return MZNetworkOutput(value, reward, policy_logits, next_afterstate)
     
-    def _representation(self, observation):
-        """Encode observation to latent state"""
-        # 簡潔なデバッグ（初回のみ）
-        if not hasattr(self, '_repr_count'):
-            print(f"    🌐 表現ネットワーク初回処理: {observation.shape}")
-            self._repr_count = 0
-        
-        self._repr_count += 1
-        latent_state = self.representation_network(observation)
-        if self.state_norm:
-            latent_state = renormalize(latent_state)
-        
-        return latent_state
+    def _representation(self, obs: torch.Tensor) -> torch.Tensor:
+        """Representation network forward"""
+        return self.representation_network(obs)
     
-    def _afterstate_dynamics(self, latent_state, action):
-        """Predict afterstate (deterministic dynamics)"""
-        afterstate = self.afterstate_dynamics_network(latent_state, action)
-        if self.state_norm:
-            afterstate = renormalize(afterstate)
-        return afterstate
+    def _prediction(self, latent_state: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Prediction network forward"""
+        return self.prediction_network(latent_state)
     
-    def _chance_encoding(self, afterstate, chance):
-        """Apply chance to afterstate (stochastic dynamics)"""
-        # Project afterstate to grid representation for chance encoding
-        # afterstate: (batch_size, state_dim=256)
-        # target: (batch_size, 16, grid_size, grid_size)
-        batch_size = afterstate.shape[0]
-        
-        # Use the projection layer to convert state to grid representation
-        grid_flat = self.state_to_grid_projection(afterstate)
-        grid_repr = grid_flat.view(batch_size, 16, self.grid_size, self.grid_size)
-        
-        next_state = self.chance_encoder(grid_repr, chance)
-        if self.state_norm:
-            next_state = renormalize(next_state)
-        return next_state
+    def _dynamics(self, latent_state: torch.Tensor, action: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Dynamics network forward"""
+        return self.dynamics_network(latent_state, action)
     
-    def _afterstate_reward(self, afterstate):
-        """Predict reward from afterstate"""
-        return self.reward_head_afterstate(afterstate)
+    def _afterstate_dynamics(self, afterstate: torch.Tensor, chance: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Afterstate dynamics network forward"""
+        return self.afterstate_dynamics_network(afterstate, chance)
     
-    def _prediction(self, latent_state):
-        """Predict value and policy"""
-        value = self.value_head(latent_state)
-        policy_logits = self.policy_head(latent_state)
-        return value, policy_logits
+    def _afterstate_prediction(self, afterstate: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Afterstate prediction network forward"""
+        return self.afterstate_prediction_network(afterstate)
     
-    def _afterstate_prediction(self, afterstate):
-        """Predict value and chance policy from afterstate"""
-        value = self.value_head(afterstate)
-        policy_logits = self.afterstate_policy_head(afterstate)  # Use chance space size
-        return value, policy_logits
-    
-    def chance_encode(self, frames):
+    def project(self, latent_state: torch.Tensor, with_grad: bool = True):
         """
-        Encode chance variables for frames
-        Args:
-            frames: (batch_size, channels*2, height, width) - concatenated consecutive frames
-        Returns:
-            chance_encoding: encoded chance values (batch_size, chance_space_size)
-            chance_one_hot: one-hot chance values (batch_size, chance_space_size)
+        Project latent state for self-supervised learning
+        (Placeholder for future SSL implementation)
         """
-        batch_size = frames.shape[0]
-        device = frames.device
+        # Use reshape instead of view for better compatibility with non-contiguous tensors
+        latent_state = latent_state.reshape(latent_state.size(0), -1)
         
-        # Generate random chance indices for each batch element
-        chance_indices = torch.randint(
-            low=0, 
-            high=self.chance_space_size, 
-            size=(batch_size,),
-            device=device
-        )
+        # Simple projection
+        proj = latent_state
         
-        # Create one-hot encoding: (batch_size, chance_space_size)
-        chance_one_hot = F.one_hot(chance_indices, num_classes=self.chance_space_size).float()
-        
-        # For StochasticMuZero, chance_encoding is the same as chance_one_hot
-        # Shape: (batch_size, chance_space_size)
-        chance_encoding = chance_one_hot
-        
-        return chance_encoding, chance_one_hot
-
-    def get_params_mean(self):
-        return get_params_mean(self)
-    
-    def get_dynamic_mean(self):
-        return get_dynamic_mean(self)
-    
-    def get_reward_mean(self):
-        return get_reward_mean(self)
-    
-    def load_state_dict_for_transfer(self, state_dict, source_grid_size: int, target_grid_size: int):
-        """
-        3×3から4×4への転移学習のためのカスタム状態辞書読み込み
-        
-        Args:
-            state_dict: 学習済みモデルの状態辞書
-            source_grid_size: ソースモデルのグリッドサイズ (e.g., 3)
-            target_grid_size: ターゲットモデルのグリッドサイズ (e.g., 4)
-        """
-        print(f"🔄 転移学習: {source_grid_size}×{source_grid_size} → {target_grid_size}×{target_grid_size}")
-        
-        # 現在のモデルの状態辞書を取得
-        current_state_dict = self.state_dict()
-        
-        # GAT関連のパラメータは直接転移可能（グラフベースなので）
-        transferable_keys = []
-        size_dependent_keys = []
-        
-        for key in state_dict.keys():
-            if any(gat_component in key for gat_component in [
-                'representation_network.gat_layers',
-                'representation_network.input_proj',
-                'representation_network.output_proj',
-                'afterstate_dynamics_network.gat_afterstate.gat_layers',
-                'afterstate_dynamics_network.gat_afterstate.input_proj',
-                'afterstate_dynamics_network.gat_afterstate.output_proj',
-                'chance_encoder.gat_chance.gat_layers',
-                'chance_encoder.gat_chance.input_proj',
-                'chance_encoder.gat_chance.output_proj',
-                'value_head',
-                'policy_head',
-                'reward_head_afterstate'
-            ]):
-                # グリッドサイズに依存しないパラメータ
-                transferable_keys.append(key)
-            elif any(size_component in key for size_component in [
-                'chance_encoder.chance_embedding',
-                'afterstate_policy_head',
-                'state_to_grid_projection'
-            ]):
-                # サイズに依存するパラメータ
-                size_dependent_keys.append(key)
-            else:
-                # その他のパラメータも転移
-                transferable_keys.append(key)
-        
-        print(f"✅ 転移可能なパラメータ: {len(transferable_keys)}個")
-        print(f"⚠️  サイズ依存パラメータ: {len(size_dependent_keys)}個")
-        
-        # 転移可能なパラメータを直接コピー
-        transferred_count = 0
-        for key in transferable_keys:
-            if key in current_state_dict and key in state_dict:
-                # サイズチェック
-                if current_state_dict[key].shape == state_dict[key].shape:
-                    current_state_dict[key] = state_dict[key]
-                    transferred_count += 1
-                else:
-                    print(f"⚠️  サイズ不一致でスキップ: {key}")
-                    print(f"    ソース: {state_dict[key].shape}, ターゲット: {current_state_dict[key].shape}")
-        
-        # サイズ依存パラメータの処理
-        adapted_count = 0
-        for key in size_dependent_keys:
-            if key in current_state_dict and key in state_dict:
-                adapted_count += self._adapt_size_dependent_parameter(
-                    key, state_dict[key], current_state_dict, 
-                    source_grid_size, target_grid_size
-                )
-        
-        # 更新された状態辞書を読み込み
-        self.load_state_dict(current_state_dict, strict=False)
-        
-        print(f"🎉 転移学習完了:")
-        print(f"  - 直接転移: {transferred_count}個のパラメータ")
-        print(f"  - 適応転移: {adapted_count}個のパラメータ")
-        
-    def _adapt_size_dependent_parameter(self, key: str, source_param: torch.Tensor, 
-                                       current_state_dict: dict, source_grid_size: int, 
-                                       target_grid_size: int) -> int:
-        """
-        サイズ依存パラメータの適応的転移
-        
-        Returns:
-            int: 成功した場合は1、失敗した場合は0
-        """
-        current_param = current_state_dict[key]
-        
-        try:
-            if 'chance_embedding' in key:
-                # チャンス埋め込みの適応
-                source_chance_size = source_grid_size ** 2 * 2  # 3×3なら18
-                target_chance_size = target_grid_size ** 2 * 2  # 4×4なら32
-                
-                if source_param.shape[0] == source_chance_size and current_param.shape[0] == target_chance_size:
-                    # 埋め込み次元は同じはずなので、新しいエントリは平均値で初期化
-                    embedding_dim = source_param.shape[1]
-                    new_embedding = torch.zeros(target_chance_size, embedding_dim)
-                    
-                    # 既存の部分をコピー
-                    copy_size = min(source_chance_size, target_chance_size)
-                    new_embedding[:copy_size] = source_param[:copy_size]
-                    
-                    # 新しい部分は既存パラメータの平均値で初期化
-                    if target_chance_size > source_chance_size:
-                        mean_param = source_param.mean(dim=0, keepdim=True)
-                        new_embedding[source_chance_size:] = mean_param.expand(
-                            target_chance_size - source_chance_size, -1
-                        )
-                    
-                    current_state_dict[key] = new_embedding
-                    print(f"✅ チャンス埋め込み適応: {source_chance_size} → {target_chance_size}")
-                    return 1
-                    
-            elif 'afterstate_policy_head' in key:
-                # アフター状態ポリシーヘッドの適応
-                # 最後の層のみサイズが異なる
-                if len(source_param.shape) == 2:  # Linear層の重み
-                    source_out_features = source_param.shape[0]
-                    target_out_features = current_param.shape[0]
-                    
-                    if source_out_features != target_out_features:
-                        # 新しい出力サイズに拡張
-                        new_param = torch.zeros_like(current_param)
-                        copy_size = min(source_out_features, target_out_features)
-                        new_param[:copy_size] = source_param[:copy_size]
-                        
-                        # 新しい部分は既存の平均値で初期化
-                        if target_out_features > source_out_features:
-                            mean_param = source_param.mean(dim=0, keepdim=True)
-                            new_param[source_out_features:] = mean_param.expand(
-                                target_out_features - source_out_features, -1
-                            )
-                        
-                        current_state_dict[key] = new_param
-                        print(f"✅ アフター状態ポリシーヘッド適応: {source_out_features} → {target_out_features}")
-                        return 1
-                        
-                elif len(source_param.shape) == 1:  # バイアス
-                    source_features = source_param.shape[0]
-                    target_features = current_param.shape[0]
-                    
-                    if source_features != target_features:
-                        new_param = torch.zeros_like(current_param)
-                        copy_size = min(source_features, target_features)
-                        new_param[:copy_size] = source_param[:copy_size]
-                        
-                        # 新しい部分は既存の平均値で初期化
-                        if target_features > source_features:
-                            mean_val = source_param.mean()
-                            new_param[source_features:] = mean_val
-                            
-                        current_state_dict[key] = new_param
-                        print(f"✅ アフター状態ポリシーバイアス適応: {source_features} → {target_features}")
-                        return 1
-                        
-            print(f"⚠️  適応できませんでした: {key}")
-            return 0
-            
-        except Exception as e:
-            print(f"❌ パラメータ適応エラー {key}: {e}")
-            return 0
+        if with_grad:
+            proj = proj / (torch.norm(proj, dim=-1, keepdim=True) + 1e-8)
+            return proj
+        else:
+            with torch.no_grad():
+                proj = proj / (torch.norm(proj, dim=-1, keepdim=True) + 1e-8)
+                return proj

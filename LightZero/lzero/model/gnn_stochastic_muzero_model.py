@@ -1,6 +1,24 @@
 """
 GNN-based Stochastic MuZero Model for 2048
 Replaces CNN with GraphSAGE for state representation and dynamics
+
+⚠️  CNN使用ポリシー ⚠️
+==================
+このモデルは完全にGraph Neural Network (GNN)ベースです。
+
+【CNNの使用制限】
+- ✅ 許可: chance_encoderのみ（チャンスノードエンコーディング用）
+- ❌ 禁止: representation_network, dynamics_network, prediction_network
+          でのCNN使用は完全に禁止
+
+【使用されるGNNコンポーネント】
+- GraphBuilder: グリッド観測をグラフ構造に変換
+- GraphSAGE: グラフ畳み込みネットワーク（3層）
+- GraphSAGEConv: メッセージパッシング層
+
+【バリデーション】
+初期化時に自動的にCNN使用チェックが実行され、
+GNN部分でCNNが使用されている場合はRuntimeErrorが発生します。
 """
 from typing import Optional, Tuple
 import math
@@ -506,6 +524,57 @@ class GNNStochasticMuZeroModel(nn.Module):
         self.chance_encoder = ChanceEncoder(
             observation_shape, chance_space_size, encoder_backbone_type='conv'
         )
+        
+        # CNN使用を防止するバリデーション
+        self._validate_no_cnn_in_gnn_components()
+    
+    def _validate_no_cnn_in_gnn_components(self):
+        """
+        GNN部分（representation, dynamics）にCNNが使われていないことを確認
+        chance_encoderのCNNは除外（チャンスノード用として許可）
+        
+        このメソッドは初期化時に呼ばれ、GNNモデルが誤ってCNNコンポーネントを
+        使用しないことを保証します。
+        """
+        prohibited_cnn_types = ['Conv2d', 'ResBlock', 'BatchNorm2d']
+        
+        for name, module in self.named_modules():
+            module_type = type(module).__name__
+            
+            # chance_encoder以外でCNNレイヤーを検出
+            if 'chance_encoder' not in name:
+                if any(cnn_type in module_type for cnn_type in prohibited_cnn_types):
+                    raise RuntimeError(
+                        f"❌ GNN部分でCNNレイヤーが検出されました！\n"
+                        f"   検出場所: {name}\n"
+                        f"   レイヤータイプ: {module_type}\n"
+                        f"   このモデルはGraph Neural Network (GNN)ベースです。\n"
+                        f"   CNNレイヤー（Conv2d, ResBlock, BatchNorm2d）の使用は禁止されています。\n"
+                        f"   例外: chance_encoderのみCNNが許可されています。"
+                    )
+        
+        # GNNコンポーネントの存在確認
+        has_graphsage = False
+        has_gnn_repr = False
+        has_gnn_dyn = False
+        
+        for name, module in self.named_modules():
+            module_type = type(module).__name__
+            if 'GraphSAGE' in module_type:
+                has_graphsage = True
+            if 'GNNRepresentationNetwork' in module_type:
+                has_gnn_repr = True
+            if 'GNNDynamicsNetwork' in module_type:
+                has_gnn_dyn = True
+        
+        if not (has_graphsage and has_gnn_repr and has_gnn_dyn):
+            raise RuntimeError(
+                f"❌ 必須GNNコンポーネントが見つかりません！\n"
+                f"   GraphSAGE: {'✅' if has_graphsage else '❌'}\n"
+                f"   GNNRepresentationNetwork: {'✅' if has_gnn_repr else '❌'}\n"
+                f"   GNNDynamicsNetwork: {'✅' if has_gnn_dyn else '❌'}\n"
+                f"   このモデルは完全にGNNベースである必要があります。"
+            )
     
     def chance_encode(self, observation: torch.Tensor):
         """

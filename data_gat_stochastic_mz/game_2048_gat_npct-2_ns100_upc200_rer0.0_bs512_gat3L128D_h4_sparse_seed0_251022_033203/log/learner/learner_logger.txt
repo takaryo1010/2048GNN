@@ -1,0 +1,148 @@
+[2025-10-22 03:32:20][base_learner.py:360][INFO] [RANK0]: DI-engine DRL Policy
+GATStochasticMuZeroModel(
+  (representation_network): GATRepresentationNetwork(
+    (gat): GraphAttention(
+      (convs): ModuleList(
+        (0): GraphAttentionConv(
+          (lin): Linear(in_features=18, out_features=512, bias=False)
+        )
+        (1-2): 2 x GraphAttentionConv(
+          (lin): Linear(in_features=512, out_features=512, bias=False)
+        )
+      )
+      (norms): ModuleList(
+        (0-1): 2 x LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+  )
+  (prediction_network): GATPredictionNetwork(
+    (value_head): GATValueHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=64, out_features=601, bias=True)
+      )
+    )
+    (policy_head): GATPolicyHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=64, out_features=4, bias=True)
+      )
+    )
+  )
+  (dynamics_network): GATDynamicsNetwork(
+    (action_encoder): Linear(in_features=4, out_features=128, bias=True)
+    (gat): GraphAttention(
+      (convs): ModuleList(
+        (0): GraphAttentionConv(
+          (lin): Linear(in_features=256, out_features=512, bias=False)
+        )
+        (1-2): 2 x GraphAttentionConv(
+          (lin): Linear(in_features=512, out_features=512, bias=False)
+        )
+      )
+      (norms): ModuleList(
+        (0-1): 2 x LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+    (reward_head): Sequential(
+      (0): Linear(in_features=384, out_features=128, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=128, out_features=64, bias=True)
+      (3): ReLU()
+      (4): Linear(in_features=64, out_features=601, bias=True)
+    )
+  )
+  (afterstate_dynamics_network): GATDynamicsNetwork(
+    (action_encoder): Linear(in_features=32, out_features=128, bias=True)
+    (gat): GraphAttention(
+      (convs): ModuleList(
+        (0): GraphAttentionConv(
+          (lin): Linear(in_features=256, out_features=512, bias=False)
+        )
+        (1-2): 2 x GraphAttentionConv(
+          (lin): Linear(in_features=512, out_features=512, bias=False)
+        )
+      )
+      (norms): ModuleList(
+        (0-1): 2 x LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+    (reward_head): Sequential(
+      (0): Linear(in_features=384, out_features=128, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=128, out_features=64, bias=True)
+      (3): ReLU()
+      (4): Linear(in_features=64, out_features=601, bias=True)
+    )
+  )
+  (afterstate_prediction_network): GATPredictionNetwork(
+    (value_head): GATValueHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=64, out_features=601, bias=True)
+      )
+    )
+    (policy_head): GATPolicyHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=64, out_features=32, bias=True)
+      )
+    )
+  )
+  (chance_encoder): ChanceEncoder(
+    (encoder): ChanceEncoderBackbone(
+      (conv1): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (conv2): Conv2d(32, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (fc1): Linear(in_features=1024, out_features=128, bias=True)
+      (fc2): Linear(in_features=128, out_features=64, bias=True)
+      (fc3): Linear(in_features=64, out_features=32, bias=True)
+    )
+    (onehot_argmax): StraightThroughEstimator()
+  )
+)
+[2025-10-22 03:32:22][base_learner.py:360][INFO] [RANK0]: learner save ckpt in ./data_gat_stochastic_mz/game_2048_gat_npct-2_ns100_upc200_rer0.0_bs512_gat3L128D_h4_sparse_seed0_251022_033203/ckpt/ckpt_best.pth.tar
+[2025-10-22 03:32:32][base_learner.py:360][INFO] [RANK0]: === Training Iteration 0 Result ===
+[2025-10-22 03:32:32][learner_hook.py:228][INFO] 
++-------+------------------------------+------------+-------------------------+----------------+
+| Name  | collect_mcts_temperature_avg | cur_lr_avg | weighted_total_loss_avg | total_loss_avg |
++-------+------------------------------+------------+-------------------------+----------------+
+| Value | 1.000000                     | 0.003000   | 59.167191               | 75.070747      |
++-------+------------------------------+------------+-------------------------+----------------+
++-------+-----------------+-----------------+----------------+----------------------+
+| Name  | policy_loss_avg | reward_loss_avg | value_loss_avg | consistency_loss_avg |
++-------+-----------------+-----------------+----------------+----------------------+
+| Value | 8.079496        | 31.992973       | 38.391567      | -0.011510            |
++-------+-----------------+-----------------+----------------+----------------------+
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Name  | afterstate_policy_loss_avg | afterstate_value_loss_avg | commitment_loss_avg | value_priority_avg |
++-------+----------------------------+---------------------------+---------------------+--------------------+
+| Value | 17.328680                  | 31.992973                 | 0.188559            | 88.329597          |
++-------+----------------------------+---------------------------+---------------------+--------------------+
++-------+-------------------+------------------+-----------------------+----------------------+
+| Name  | target_reward_avg | target_value_avg | predicted_rewards_avg | predicted_values_avg |
++-------+-------------------+------------------+-----------------------+----------------------+
+| Value | 8.770834          | 87.505760        | -0.000006             | -0.000006            |
++-------+-------------------+------------------+-----------------------+----------------------+
++-------+-------------------------------+------------------------------+---------------------------------+
+| Name  | transformed_target_reward_avg | transformed_target_value_avg | total_grad_norm_before_clip_avg |
++-------+-------------------------------+------------------------------+---------------------------------+
+| Value | 1.464334                      | 7.844598                     | 8.760687                        |
++-------+-------------------------------+------------------------------+---------------------------------+
+
+[2025-10-22 03:32:32][base_learner.py:360][INFO] [RANK0]: learner save ckpt in ./data_gat_stochastic_mz/game_2048_gat_npct-2_ns100_upc200_rer0.0_bs512_gat3L128D_h4_sparse_seed0_251022_033203/ckpt/iteration_0.pth.tar
+[2025-10-22 03:32:46][base_learner.py:360][INFO] [RANK0]: learner save ckpt in ./data_gat_stochastic_mz/game_2048_gat_npct-2_ns100_upc200_rer0.0_bs512_gat3L128D_h4_sparse_seed0_251022_033203/ckpt/iteration_20.pth.tar

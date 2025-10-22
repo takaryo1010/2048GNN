@@ -220,6 +220,8 @@ class StochasticMuZeroModel(nn.Module):
             - latent_state (:obj:`torch.Tensor`): :math:`(B, H_, W_)`, where B is batch_size, H_ is the height of \
                 latent state, W_ is the width of latent state.
          """
+         #絶対に通らないようにする
+        assert True == False, "CNNは使ってはいけません"
         batch_size = obs.size(0)
         latent_state = self._representation(obs)
         policy_logits, value = self._prediction(latent_state)
