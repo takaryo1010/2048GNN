@@ -33,6 +33,111 @@ from .gnn_utils import GraphBuilder, GraphSAGE
 from .utils import renormalize
 
 
+class GNNChanceEncoder(nn.Module):
+    """
+    GNN-based Chance Encoder for Stochastic MuZero
+    Predicts chance outcomes from observation changes (2 consecutive frames)
+    Uses GNN instead of CNN for transfer learning compatibility
+    """
+    
+    def __init__(
+        self,
+        observation_shape: SequenceType = (16, 4, 4),
+        chance_space_size: int = 32,
+        num_channels: int = 128,
+        num_gnn_layers: int = 2,
+        grid_size: int = 4,
+        include_row_col_edges: bool = True,
+        dropout: float = 0.0,
+        edge_mode: str = 'sparse',
+    ):
+        """
+        Args:
+            observation_shape: Shape of observation [C, H, W]
+            chance_space_size: Number of possible chance outcomes
+            num_channels: Hidden dimension for GNN
+            num_gnn_layers: Number of GraphSAGE layers
+            grid_size: Grid size (4 for 4x4)
+            include_row_col_edges: Whether to include row/column edges
+            dropout: Dropout rate
+            edge_mode: Edge connectivity mode
+        """
+        super().__init__()
+        self.observation_shape = observation_shape
+        self.chance_space_size = chance_space_size
+        self.num_channels = num_channels
+        self.grid_size = grid_size
+        
+        # Graph builder
+        self.graph_builder = GraphBuilder(grid_size, include_row_col_edges, edge_mode)
+        
+        # Input: 2 consecutive frames concatenated
+        # observation_shape[0] * 2 for two frames + 2 for positional encoding
+        in_dim = observation_shape[0] * 2 + 2
+        
+        # GraphSAGE encoder
+        self.gnn = GraphSAGE(
+            in_dim=in_dim,
+            hidden_dim=num_channels,
+            num_layers=num_gnn_layers,
+            dropout=dropout,
+            use_bn=True
+        )
+        
+        # Global pooling and prediction head
+        # Use multi-aggregation like in GNNValueHead
+        aggregated_dim = num_channels * 3  # mean, max, sum
+        
+        # MLP for chance prediction
+        self.chance_head = nn.Sequential(
+            nn.Linear(aggregated_dim, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, chance_space_size)
+        )
+        
+        # Straight Through Estimator for one-hot conversion
+        from .stochastic_muzero_model import StraightThroughEstimator
+        self.onehot_argmax = StraightThroughEstimator()
+    
+    def forward(self, observations: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Args:
+            observations: [B, C*2, H, W] - Two consecutive frames concatenated
+        
+        Returns:
+            chance_encoding: [B, chance_space_size] - Raw logits
+            chance_onehot: [B, chance_space_size] - One-hot encoded
+        """
+        batch_size = observations.size(0)
+        
+        # Convert observation to graph
+        # observations: [B, C*2, H, W] where C*2 = 32 for 2048 (16*2)
+        node_features, edge_index = self.graph_builder.obs_to_graph(observations)
+        # node_features: [B, N, C*2+2] where N=16 nodes
+        
+        # Apply GNN
+        node_embeddings = self.gnn(node_features, edge_index)
+        # node_embeddings: [B, N, num_channels]
+        
+        # Global aggregation (multi-aggregation)
+        mean_pool = node_embeddings.mean(dim=1)      # [B, num_channels]
+        max_pool = node_embeddings.max(dim=1)[0]     # [B, num_channels]
+        sum_pool = node_embeddings.sum(dim=1)        # [B, num_channels]
+        
+        # Concatenate aggregations
+        aggregated = torch.cat([mean_pool, max_pool, sum_pool], dim=-1)  # [B, 3*num_channels]
+        
+        # Predict chance distribution
+        chance_encoding = self.chance_head(aggregated)  # [B, chance_space_size]
+        
+        # Apply one-hot argmax with straight-through estimator
+        chance_onehot = self.onehot_argmax(chance_encoding)
+        
+        return chance_encoding, chance_onehot
+
+
 class GNNRepresentationNetwork(nn.Module):
     """
     GNN-based Representation Network
@@ -518,11 +623,16 @@ class GNNStochasticMuZeroModel(nn.Module):
             last_linear_layer_init_zero=last_linear_layer_init_zero,
         )
         
-        # Chance encoder - needs to match ChanceEncoder interface from stochastic_muzero_model.py
-        # Import the ChanceEncoder from the standard model
-        from .stochastic_muzero_model import ChanceEncoder
-        self.chance_encoder = ChanceEncoder(
-            observation_shape, chance_space_size, encoder_backbone_type='conv'
+        # GNN-based Chance Encoder (replaces CNN version for transfer learning)
+        self.chance_encoder = GNNChanceEncoder(
+            observation_shape=observation_shape,
+            chance_space_size=chance_space_size,
+            num_channels=num_channels,
+            num_gnn_layers=max(num_gnn_layers - 1, 1),  # Slightly fewer layers than main network
+            grid_size=grid_size,
+            include_row_col_edges=include_row_col_edges,
+            dropout=dropout,
+            edge_mode=edge_mode,
         )
         
         # CNN使用を防止するバリデーション

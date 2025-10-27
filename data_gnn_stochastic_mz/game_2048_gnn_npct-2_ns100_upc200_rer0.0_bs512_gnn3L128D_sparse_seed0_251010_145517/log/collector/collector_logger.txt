@@ -1,0 +1,16 @@
+[2025-10-10 14:56:07][muzero_collector.py:494][INFO] Debug collect shapes: stack_obs=(8, 16, 4, 4), action=(), searched_value=<class 'float'>, predicted_value=(1,)
+[2025-10-10 15:01:35][muzero_collector.py:838][INFO] collect end:
+episode_count: 16
+envstep_count: 1155
+avg_envstep_per_episode: 72.1875
+avg_envstep_per_sec: 6.240005221988334
+avg_episode_per_sec: 0.08644163078079078
+collect_time: 185.09599894725204
+reward_mean: 513.75
+reward_std: 269.581040690921
+reward_max: 1132.0
+reward_min: 156.0
+total_envstep_count: 1155
+total_episode_count: 16
+total_duration: 461.8062781501559
+visit_entropy: 1.900977930818914

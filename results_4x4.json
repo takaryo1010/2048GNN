@@ -1,0 +1,16 @@
+{
+  "grid_size": 4,
+  "num_episodes": 3,
+  "successful_episodes": 3,
+  "mean_return": 4992.0,
+  "std_return": 2767.19256046027,
+  "min_return": 2860.0,
+  "max_return": 8900.0,
+  "all_returns": [
+    3216.0,
+    8900.0,
+    2860.0
+  ],
+  "model_path": "./LightZero/zoo/game_2048/config/data_gnn_stochastic_mz/gnn_simple_success/ckpt/iteration_79400.pth.tar",
+  "timestamp": "2025-10-10T05:52:09.229071"
+}
