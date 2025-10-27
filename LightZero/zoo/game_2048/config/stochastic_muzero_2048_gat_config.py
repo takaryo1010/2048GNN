@@ -32,7 +32,7 @@ gnn_dropout = 0.0
 # - 'adjacent': ~56 edges, fastest (only 4-neighbors)
 # - 'sparse': ~88 edges, balanced (4-neighbors + distance-2)
 # - 'full': ~200 edges, slowest (all pairs in row/col)
-edge_mode = 'sparse'  # Recommended: 'sparse' for best speed/accuracy tradeoff
+edge_mode = 'adjacent'  # Recommended: 'sparse' for best speed/accuracy tradeoff
 # ==============================================================
 # End of GAT-specific config
 # ==============================================================

@@ -1,7 +1,59 @@
 """
-GATがCNNより遅い理由の詳細分析
-理論的計算量とボトルネック解析
+GAT vs CNN 速度差の詳細分析
+なぜ3層のGATが多層CNNより遅いのかを計算量レベルで解析
 """
+import sys
+import torch
+import torch.nn as nn
+
+# オリジナルのLightZeroを使用（CNNアサーションがない）
+sys.path.insert(0, '/opendilab/LightZero')
+from lzero.model.stochastic_muzero_model import StochasticMuZeroModel as OriginalCNNModel
+
+# 2048GNNのGATモデルを使用
+sys.path.insert(0, '/opendilab/2048GNN/LightZero')
+from lzero.model.gat_stochastic_muzero_model import GATStochasticMuZeroModel
+from zoo.game_2048.config.stochastic_muzero_2048_gat_config import main_config as gat_config
+
+import time
+import numpy as np
+
+
+def count_operations(model, input_shape, batch_size=1):
+    """モデルの計算量を推定（FLOPs）"""
+    total_ops = 0
+    total_params = 0
+    
+    def hook(module, input, output):
+        nonlocal total_ops, total_params
+        
+        # パラメータ数をカウント
+        params = sum(p.numel() for p in module.parameters())
+        total_params += params
+        
+        # 演算回数を推定
+        if isinstance(module, nn.Conv2d):
+            # Conv2d: batch_size * out_channels * out_h * out_w * (kernel_h * kernel_w * in_channels)
+            batch_size = input[0].shape[0]
+            out_h, out_w = output.shape[2], output.shape[3]
+            kernel_ops = module.kernel_size[0] * module.kernel_size[1] * module.in_channels
+            total_ops += batch_size * module.out_channels * out_h * out_w * kernel_ops
+            
+        elif isinstance(module, nn.Linear):
+            # Linear: batch_size * out_features * in_features
+            batch_size = input[0].shape[0]
+            total_ops += batch_size * module.out_features * module.in_features
+            
+        elif isinstance(module, nn.BatchNorm2d) or isinstance(module, nn.LayerNorm):
+            # BatchNorm/LayerNorm: 各要素に対して2演算（減算と除算）
+            total_ops += output.numel() * 2
+    
+    hooks = []
+    for name, module in model.named_modules():
+        hooks.append(module.register_forward_hook(hook))
+    
+    return hooks, total_ops, total_params
+
 
 def analyze_gat_operations():
     """GATモデルの演算内訳を詳細分析"""
@@ -172,6 +224,104 @@ def analyze_cnn_operations():
     return total_cnn_single
 
 
+def measure_actual_speed():
+    """実際の実行速度を測定"""
+    print("="*100)
+    print("実際の実行速度測定")
+    print("="*100)
+    print()
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"デバイス: {device}")
+    print()
+    
+    # モデルを構築
+    print("モデルをロード中...")
+    
+    # GAT
+    gat_cfg = gat_config.policy.model
+    gat_model = GATStochasticMuZeroModel(
+        observation_shape=(16, 4, 4),
+        action_space_size=4,
+        chance_space_size=16,
+        num_channels=gat_cfg.num_channels,
+        num_gnn_layers=gat_cfg.num_gnn_layers,
+        num_heads=gat_cfg.num_heads,
+        edge_mode=gat_cfg.edge_mode,
+    ).to(device)
+    
+    # CNN（オリジナルのLightZeroから）
+    cnn_model = OriginalCNNModel(
+        observation_shape=(16, 4, 4),
+        action_space_size=4,
+        chance_space_size=16,
+        num_res_blocks=1,  # デフォルト値
+        num_channels=64,   # デフォルト値
+        downsample=False,
+    ).to(device)
+    
+    gat_model.eval()
+    cnn_model.eval()
+    
+    # ダミー入力
+    batch_size = 256  # 実際のトレーニングと同じ
+    obs = torch.randn(batch_size, 16, 4, 4).to(device)
+    
+    # ウォームアップ
+    print("ウォームアップ中...")
+    with torch.no_grad():
+        for _ in range(10):
+            _ = gat_model.initial_inference(obs)
+            _ = cnn_model.initial_inference(obs)
+    
+    if device.type == 'cuda':
+        torch.cuda.synchronize()
+    
+    # GAT測定
+    print(f"\nGAT測定中（batch_size={batch_size}）...")
+    gat_times = []
+    with torch.no_grad():
+        for _ in range(100):
+            start = time.time()
+            _ = gat_model.initial_inference(obs)
+            if device.type == 'cuda':
+                torch.cuda.synchronize()
+            gat_times.append(time.time() - start)
+    
+    gat_mean = np.mean(gat_times) * 1000  # ms
+    gat_std = np.std(gat_times) * 1000
+    
+    # CNN測定
+    print(f"CNN測定中（batch_size={batch_size}）...")
+    cnn_times = []
+    with torch.no_grad():
+        for _ in range(100):
+            start = time.time()
+            _ = cnn_model.initial_inference(obs)
+            if device.type == 'cuda':
+                torch.cuda.synchronize()
+            cnn_times.append(time.time() - start)
+    
+    cnn_mean = np.mean(cnn_times) * 1000  # ms
+    cnn_std = np.std(cnn_times) * 1000
+    
+    print()
+    print(f"【実測結果】")
+    print(f"  GAT: {gat_mean:.2f} ± {gat_std:.2f} ms/batch")
+    print(f"  CNN: {cnn_mean:.2f} ± {cnn_std:.2f} ms/batch")
+    print(f"  速度比: GAT は CNN の {gat_mean/cnn_mean:.2f}x 遅い")
+    print()
+    
+    # スループット
+    gat_throughput = batch_size / (gat_mean / 1000)
+    cnn_throughput = batch_size / (cnn_mean / 1000)
+    
+    print(f"【スループット】")
+    print(f"  GAT: {gat_throughput:.1f} samples/sec")
+    print(f"  CNN: {cnn_throughput:.1f} samples/sec")
+    print()
+
+
 def main():
     print("\n")
     print("*" * 100)
@@ -200,96 +350,39 @@ def main():
     
     # ボトルネックの分析
     print("="*100)
-    print("GATが遅い主な理由（計算量は少ないのになぜ遅い？）")
+    print("GATが遅い主な理由")
     print("="*100)
     print()
-    print("【重要】理論演算量（FLOPs）と実行時間は比例しない！")
+    print("1. 【非効率なメモリアクセスパターン】")
+    print("   - CNNは規則的な畳み込み（GPUのテンソルコアで最適化済み）")
+    print("   - GATは不規則なグラフ構造（エッジリストによるスキャッター・ギャザー）")
+    print("   - GPUキャッシュヒット率が低い")
     print()
-    print("1. 【非効率なメモリアクセスパターン】⚠️ 最大のボトルネック")
-    print("   CNNの場合:")
-    print("   - 規則的な畳み込み演算（連続メモリアクセス）")
-    print("   - GPUのテンソルコアで最適化（NVIDIA cuDNN）")
-    print("   - キャッシュヒット率 90%以上")
-    print("   - データの再利用が容易（同じ重みを繰り返し使用）")
+    print("2. 【アテンション機構の計算コスト】")
+    print("   - 各エッジごとにアテンションスコアを計算")
+    print("   - ソフトマックスの正規化（非線形演算、並列化困難）")
+    print("   - 4つのヘッドで独立に計算（冗長な計算）")
     print()
-    print("   GATの場合:")
-    print("   - 不規則なグラフ構造（エッジリストによるランダムアクセス）")
-    print("   - スキャッター・ギャザー操作が多発")
-    print("   - GPUキャッシュヒット率 30-50%程度")
-    print("   - メモリ帯域幅が律速（計算よりデータ転送が支配的）")
+    print("3. 【グラフ構築のオーバーヘッド】")
+    print("   - 毎ステップでエッジリストを構築")
+    print("   - スキャッター・ギャザー操作（PyTorch Geometricの実装）")
+    print("   - CPUとGPU間のデータ転送")
     print()
-    print("   例: 16ノードのグラフでは、各ノードの隣接ノードにアクセスするたびに")
-    print("       メモリの異なる場所を参照 → キャッシュミス頻発")
-    print()
-    
-    print("2. 【アテンション機構の計算特性】")
-    print("   - ソフトマックス正規化:")
-    print("     * 非線形演算（exp関数は畳み込みより遅い）")
-    print("     * ノードごとに独立した正規化が必要（並列化が困難）")
-    print("     * ブランチ予測ミス発生")
-    print()
-    print("   - マルチヘッドアテンション:")
-    print("     * 4つのヘッドで独立に計算")
-    print("     * 冗長な計算（ヘッド間で計算を共有できない）")
-    print("     * メモリフットプリントが4倍に増加")
-    print()
-    
-    print("3. 【グラフ構築とデータ変換のオーバーヘッド】")
-    print("   毎回のフォワードパスで:")
-    print("   - グリッド → グラフ変換（エッジリスト生成）")
-    print("   - 位置エンコーディングの計算")
-    print("   - スキャッター・ギャザーのセットアップ")
-    print("   - PyTorch Geometric特有のオーバーヘッド")
-    print()
-    print("   これらの処理はPythonレイヤーで実行されるため:")
-    print("   - GIL（Global Interpreter Lock）の影響")
-    print("   - CPU-GPU間のデータ転送")
-    print("   - カーネル起動のオーバーヘッド（小さいグラフほど顕著）")
-    print()
-    
-    print("4. 【小規模グラフでのスケーラビリティ問題】")
+    print("4. 【小さいグリッドサイズの不利】")
     print("   - 4x4 = 16ノードは非常に小さい")
-    print("   - GPU並列度: 数千〜数万スレッドを活用できない")
-    print("   - セットアップコストが計算コストを上回る")
+    print("   - GATの強みは大規模グラフ（数千〜数万ノード）")
+    print("   - 小規模ではオーバーヘッドが支配的")
     print()
-    print("   GPU利用効率の比較:")
-    print("   - CNN: 64チャンネル × 4×4 = 1,024要素 → 並列処理に適切")
-    print("   - GAT: 16ノード × 4ヘッド = 64並列 → GPU能力を活かせない")
-    print()
-    print("   GATの強みは大規模グラフ（1,000〜100,000ノード）")
-    print("   小規模ではオーバーヘッドが支配的になる")
-    print()
-    
-    print("5. 【CNNの極限まで最適化されたライブラリ】")
-    print("   cuDNN（NVIDIA提供）の最適化:")
-    print("   - Winograd法による畳み込み高速化（2-3倍）")
-    print("   - FFTベース畳み込み")
-    print("   - テンソルコア活用（Tensor Core: 行列演算を加速）")
-    print("   - 融合カーネル（BatchNorm + ReLUなどを1カーネルで実行）")
-    print("   - メモリレイアウトの最適化")
-    print()
-    print("   GATの最適化状況:")
-    print("   - PyTorch Geometricは汎用的な実装")
-    print("   - 特定ハードウェア向けの最適化なし")
-    print("   - 融合カーネルなし（各操作が個別に実行）")
-    print("   - メモリコピーが多発")
+    print("5. 【CNNの高度な最適化】")
+    print("   - cuDNN等のライブラリで極限まで最適化")
+    print("   - Winograd法、FFTベース畳み込みなど")
+    print("   - テンソルコア活用（行列演算の高速化）")
+    print("   - GATにはこのレベルの最適化が存在しない")
     print()
     
-    print("6. 【具体的な数値例】")
+    # 実測
     print()
-    print("   理論演算量比較:")
-    print(f"   - GAT: {gat_flops:,} FLOPs")
-    print(f"   - CNN: {cnn_flops:,.0f} FLOPs")
-    print(f"   - 比率: GAT は CNN の {gat_flops/cnn_flops:.2f}x （少ない）")
-    print()
-    print("   実行時間比較（実測結果から）:")
-    print("   - GAT: 約7.58 steps/sec")
-    print("   - CNN: 約16.56 steps/sec")
-    print("   - 比率: GAT は CNN の 2.18x 遅い")
-    print()
-    print("   → 演算量は1/4なのに、実行時間は2倍以上")
-    print("   → メモリアクセスとオーバーヘッドが支配的")
-    print()
+    measure_actual_speed()
     
     # 結論
     print("="*100)
@@ -298,58 +391,28 @@ def main():
     print()
     print("【なぜ3層のGATが多層CNNより遅いのか】")
     print()
-    print("❌ 誤解: 層数が少ないから速いはず")
-    print("✅ 真実: 層数ではなく、演算の性質とハードウェア最適化の差が決定的")
+    print("答え: 層数ではなく、演算の性質とハードウェア最適化の差")
     print()
-    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print("- GATは理論上の演算量はCNNと同等またはやや多い程度")
+    print("- しかし、実行速度は2〜3倍遅い")
     print()
-    print("【演算量 vs 実行時間のギャップ】")
+    print("主な原因:")
+    print("  1. 不規則なメモリアクセス（グラフ構造特有の問題）")
+    print("  2. アテンション計算の非効率性（エッジごとの計算）")
+    print("  3. グラフ構築のオーバーヘッド（毎ステップ実行）")
+    print("  4. CNN専用の高度なハードウェア・ソフトウェア最適化の欠如")
     print()
-    print(f"  理論演算量:  GAT は CNN の {gat_flops/cnn_flops:.1f}x 少ない")
-    print(f"  実行速度:    GAT は CNN の 2.2x 遅い")
+    print("【2048ゲームでのGAT使用の適否】")
     print()
-    print(f"  → 約 {(gat_flops/cnn_flops) * 2.2:.1f}x の効率低下！")
-    print()
-    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    print()
-    
-    print("【主な原因トップ3】")
-    print()
-    print("🥇 1位: 不規則なメモリアクセス（推定50-60%の速度低下）")
-    print("   - グラフ構造による散在したメモリアクセス")
-    print("   - キャッシュヒット率の低下")
-    print("   - メモリ帯域幅の浪費")
-    print()
-    print("🥈 2位: グラフ構築のオーバーヘッド（推定20-30%の速度低下）")
-    print("   - 毎ステップのエッジリスト構築")
-    print("   - CPUとGPU間のデータ転送")
-    print("   - Pythonレイヤーの処理")
-    print()
-    print("🥉 3位: 小規模グラフの並列化不足（推定10-20%の速度低下）")
-    print("   - 16ノードではGPUの能力を活かせない")
-    print("   - カーネル起動オーバーヘッドが相対的に大きい")
-    print()
-    
-    print("【2048ゲームにおけるGAT使用の評価】")
-    print()
-    print("❌ 推奨しない理由:")
-    print("  1. 小さい4×4グリッド → GATの強みが活きない")
-    print("  2. 密な接続構造 → グラフ表現の利点が薄い")
-    print("  3. 実行速度が遅い → 学習効率が悪い")
-    print("  4. パフォーマンスも劣る → 報酬が18.5%低い")
+    print("❌ 不適:")
+    print("  - 4×4の小さいグリッド（GATの強みが活きない）")
+    print("  - 密な接続（全ノードが近接 → グラフの利点が薄い）")
+    print("  - リアルタイム性が重要（速度が致命的）")
     print()
     print("✅ GATが有効な場合:")
-    print("  - 大規模グラフ（100〜10,000ノード以上）")
-    print("  - 疎な接続（平均次数が√N程度）")
-    print("  - 不規則な構造（化学分子、ソーシャルネットワークなど）")
-    print("  - ノード間の関係が重要なタスク")
-    print()
-    print("【実践的な推奨】")
-    print()
-    print("2048のような小規模グリッドゲームには:")
-    print("  ✅ CNN: 高速、高性能、実績あり")
-    print("  ✅ MLP: シンプル、軽量（CNNより若干劣る）")
-    print("  ❌ GNN/GAT: オーバーヘッドが大きすぎる")
+    print("  - 大規模グラフ（数百〜数千ノード）")
+    print("  - 疎な接続（接続パターンが重要）")
+    print("  - 不規則な構造（グリッドではない）")
     print()
     print("="*100)
 
