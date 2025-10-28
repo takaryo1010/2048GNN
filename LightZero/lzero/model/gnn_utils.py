@@ -16,10 +16,15 @@ class GraphBuilder:
     - Each cell becomes a node
     - Edges connect: adjacent cells (up/down/left/right) + optionally same row/column pairs
     - Node features: log2(tile_value), is_empty, position_encoding
+    
+    【パフォーマンス最適化 A-1】
+    - エッジインデックスを事前にGPUに配置（デバイス移動のオーバーヘッド削減）
+    - 位置エンコーディングをキャッシュ（毎回の計算を回避）
+    - 推定20-30%の高速化
     """
     
     def __init__(self, grid_size: int = 4, include_row_col_edges: bool = True, 
-                 edge_mode: str = 'full'):
+                 edge_mode: str = 'full', device: Optional[torch.device] = None):
         """
         Args:
             grid_size: Size of the square grid (default 4 for 4x4)
@@ -28,6 +33,7 @@ class GraphBuilder:
                 - 'adjacent': Only 4-connected neighbors (fastest, ~56 edges for 4x4)
                 - 'sparse': Adjacent + next-nearest in rows/cols (fast, ~88 edges)
                 - 'full': All pairs in same row/col (slow, ~200 edges)
+            device: デバイス指定（None の場合は初回アクセス時に自動設定）
         """
         self.grid_size = grid_size
         self.num_nodes = grid_size * grid_size
@@ -38,8 +44,13 @@ class GraphBuilder:
         else:
             self.edge_mode = edge_mode
         
-        # Pre-compute edge indices (static for fixed grid)
+        # 【最適化A-1】エッジインデックスを事前計算してデバイスに配置
         self.edge_index = self._build_edge_index()
+        if device is not None:
+            self.edge_index = self.edge_index.to(device)
+        
+        # 【最適化A-1】位置エンコーディングのキャッシュ（バッチサイズ×デバイスごと）
+        self._pos_encoding_cache = {}
     
     def _build_edge_index(self) -> torch.Tensor:
         """
@@ -125,12 +136,13 @@ class GraphBuilder:
             node_features: [B, N, D] where N=16 nodes, D is feature dimension
             edge_index: [2, E] where E is number of edges (shared across batch)
         """
-        # バッチサイズ
         batch_size = obs.size(0)
+        device = obs.device
 
-        # edge_index を観測と同じデバイスに移す
-        # - edge_index: [2, E], 事前計算されたエッジインデックス（グリッド接続）
-        edge_index = self.edge_index.to(obs.device)
+        # 【最適化A-1】エッジインデックスのデバイス移動を最小化
+        # 既に同じデバイスにあればスキップ、異なる場合のみ移動
+        if self.edge_index.device != device:
+            self.edge_index = self.edge_index.to(device)
 
         # 観測からノード特徴を抽出
         # - obs: [B, C, H, W]
@@ -138,20 +150,58 @@ class GraphBuilder:
         # - transpose(1,2) -> [B, H*W, C]  (ここで N = H*W はノード数)
         node_features = obs.flatten(2).transpose(1, 2)  # [B, N, C]
 
-        # 位置情報を追加
-        # - pos_encoding: [B, N, 2] (row_norm, col_norm)
-        # - concat -> node_features: [B, N, C+2]
-        pos_encoding = self._get_positional_encoding(batch_size, obs.device)
+        # 【最適化A-1】キャッシュされた位置エンコーディングを使用
+        # 毎回の計算を回避し、初回のみ生成してキャッシュに保存
+        pos_encoding = self._get_cached_positional_encoding(batch_size, device)
         node_features = torch.cat([node_features, pos_encoding], dim=-1)
 
         # 戻り値:
         # - node_features: [B, N, D_in]  (D_in = C + 2)
         # - edge_index: [2, E]
-        return node_features, edge_index
+        return node_features, self.edge_index
+    
+    def _get_cached_positional_encoding(self, batch_size: int, 
+                                       device: torch.device) -> torch.Tensor:
+        """
+        【最適化A-1】キャッシュされた位置エンコーディングを返す
+        
+        位置エンコーディングは静的（グリッドサイズ固定）なので、
+        バッチサイズとデバイスの組み合わせごとに1回だけ計算してキャッシュ。
+        毎回のPythonループとテンソル生成を回避。
+        
+        Args:
+            batch_size: バッチサイズ
+            device: テンソルのデバイス
+        
+        Returns:
+            pos_encoding: [B, N, 2] 位置エンコーディング
+        """
+        # キャッシュキー: (バッチサイズ, デバイス)
+        cache_key = (batch_size, device)
+        
+        if cache_key not in self._pos_encoding_cache:
+            # 初回のみ計算してキャッシュに保存
+            positions = []
+            for i in range(self.grid_size):
+                for j in range(self.grid_size):
+                    # Normalize to [0, 1]
+                    row_norm = i / (self.grid_size - 1) if self.grid_size > 1 else 0.5
+                    col_norm = j / (self.grid_size - 1) if self.grid_size > 1 else 0.5
+                    positions.append([row_norm, col_norm])
+            
+            pos_tensor = torch.tensor(positions, dtype=torch.float32, device=device)
+            # Expand for batch: [N, 2] -> [B, N, 2]
+            pos_encoding = pos_tensor.unsqueeze(0).expand(batch_size, -1, -1)
+            self._pos_encoding_cache[cache_key] = pos_encoding
+        
+        return self._pos_encoding_cache[cache_key]
     
     def _get_positional_encoding(self, batch_size: int, device: torch.device) -> torch.Tensor:
         """
         Generate positional encoding for each node (row_id, col_id normalized to [0,1])
+        
+        【非推奨】後方互換性のために残されています。
+        代わりに _get_cached_positional_encoding を使用してください。
         
         Returns:
             pos_encoding: [B, N, 2]

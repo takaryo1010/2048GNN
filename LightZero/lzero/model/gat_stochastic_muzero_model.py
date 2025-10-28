@@ -2,23 +2,29 @@
 GAT-based Stochastic MuZero Model for 2048
 Replaces CNN with Graph Attention Network (GAT) for state representation and dynamics
 
-⚠️  CNN使用ポリシー ⚠️
-==================
+⚠️  完全GAT実装ポリシー ⚠️
+==========================
 このモデルは完全にGraph Attention Network (GAT)ベースです。
 
 【CNNの使用制限】
-- ✅ 許可: chance_encoderのみ（チャンスノードエンコーディング用）
-- ❌ 禁止: representation_network, dynamics_network, prediction_network
-          でのCNN使用は完全に禁止
+- ❌ 禁止: すべてのコンポーネントでCNN使用を禁止
+- ✅ GAT: representation_network, dynamics_network, prediction_network, chance_encoder
+          すべてGATベースで実装
 
 【使用されるGATコンポーネント】
 - GraphBuilder: グリッド観測をグラフ構造に変換
 - GraphAttention: グラフアテンションネットワーク（マルチヘッド）
 - GraphAttentionConv: アテンションベースのメッセージパッシング層
+- GATChanceEncoder: GAT版チャンスエンコーダ（転移学習対応）
+
+【転移学習対応】
+GATベースの設計により、異なるグリッドサイズ間での転移学習が可能：
+- 3×3 ⇄ 4×4 ⇄ 5×5 など、任意のサイズ間で重みを共有可能
+- グラフプーリングによりサイズ非依存の特徴抽出を実現
 
 【バリデーション】
 初期化時に自動的にCNN使用チェックが実行され、
-GAT部分でCNNが使用されている場合はRuntimeErrorが発生します。
+CNNが使用されている場合はRuntimeErrorが発生します。
 """
 from typing import Optional, Tuple
 import math
@@ -34,10 +40,180 @@ from .gat_utils import GraphAttention  # New GAT module
 from .utils import renormalize
 
 
+# ============================================================================
+# StraightThroughEstimator（ChanceEncoder用）
+# ============================================================================
+
+class OnehotArgmax(torch.autograd.Function):
+    """
+    Straight-through estimator for one-hot argmax
+    Forward: argmax (discrete)
+    Backward: identity (gradient flows through)
+    """
+    @staticmethod
+    def forward(ctx, x):
+        # One-hot encoding of argmax
+        indices = x.argmax(dim=-1, keepdim=True)
+        x_hard = torch.zeros_like(x).scatter_(-1, indices, 1.0)
+        return x_hard
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        # Straight-through: gradient passes unchanged
+        return grad_output
+
+
+class StraightThroughEstimator(nn.Module):
+    """Applies one-hot argmax with straight-through gradient"""
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return OnehotArgmax.apply(x)
+
+
+# ============================================================================
+# GATChanceEncoder（転移学習対応）
+# ============================================================================
+
+class GATChanceEncoder(nn.Module):
+    """
+    GAT-based Chance Encoder
+    
+    【サイズ非依存設計】
+    - 任意のグリッドサイズ（3×3、4×4、5×5など）に対応
+    - グラフプーリング（mean/max/sum）でサイズ非依存の特徴抽出
+    - MLPの入力次元がグリッドサイズに依存しない
+    
+    【転移学習対応】
+    - 異なるグリッドサイズ間で重みを共有可能
+    - 例: 4×4で学習 → 3×3に転移（GraphBuilder以外の重みを再利用）
+    
+    【最適化】
+    - B-1: adjacentモードで高速化
+    - B-3: GroupNormで高速化
+    - D-1: インプレース演算
+    """
+    
+    def __init__(
+        self,
+        observation_shape: Tuple[int, int, int],  # (C, H, W)
+        chance_space_size: int,
+        num_gnn_layers: int = 2,
+        num_heads: int = 4,
+        hidden_dim: int = 64,
+        edge_mode: str = 'adjacent',
+        norm_type: str = 'group',
+        include_row_col_edges: bool = False,
+    ):
+        """
+        Args:
+            observation_shape: 観測の形状 (channels, height, width)
+            chance_space_size: チャンス空間のサイズ
+            num_gnn_layers: GATレイヤー数（デフォルト2層で軽量化）
+            num_heads: アテンションヘッド数
+            hidden_dim: 隠れ層の次元数
+            edge_mode: エッジ接続モード（'adjacent'推奨）
+            norm_type: 正規化タイプ（'group'推奨）
+            include_row_col_edges: 行/列エッジを含めるか
+        """
+        super().__init__()
+        
+        channels, height, width = observation_shape
+        self.grid_size = height  # 正方形グリッドを仮定
+        self.hidden_dim = hidden_dim
+        
+        # 【サイズ非依存】GraphBuilder
+        # グリッドサイズが変わっても、GATとMLPの重みは再利用可能
+        self.graph_builder = GraphBuilder(
+            grid_size=self.grid_size,
+            include_row_col_edges=include_row_col_edges,
+            edge_mode=edge_mode,
+            device=None  # 【最適化A-1】初回アクセス時に自動設定
+        )
+        
+        # Input dimension: observation channels + 2 (positional encoding)
+        in_dim = channels + 2
+        
+        # 【最適化A-2, A-3, B-3】GAT Encoder
+        self.gat = GraphAttention(
+            in_dim=in_dim,
+            hidden_dim=hidden_dim,
+            num_layers=num_gnn_layers,
+            num_heads=num_heads,
+            dropout=0.0,
+            use_bn=True,
+            norm_type=norm_type  # 【最適化B-3】GroupNorm推奨
+        )
+        
+        # 【サイズ非依存】Graph Pooling + MLP
+        # グラフプーリング後の次元は hidden_dim * 3（mean, max, sum）
+        # グリッドサイズに関係なく一定
+        aggregated_dim = hidden_dim * 3
+        
+        # 【最適化D-1】インプレース演算
+        self.mlp = nn.Sequential(
+            nn.Linear(aggregated_dim, 128),
+            nn.ReLU(inplace=True),
+            nn.Linear(128, 64),
+            nn.ReLU(inplace=True),
+            nn.Linear(64, chance_space_size)
+        )
+        
+        # Straight Through Estimator
+        self.onehot_argmax = StraightThroughEstimator()
+    
+    def forward(self, observations: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Forward pass
+        
+        Args:
+            observations: [B, C, H, W]
+        
+        Returns:
+            chance_encoding: [B, chance_space_size] (soft distribution)
+            chance_onehot: [B, chance_space_size] (one-hot with straight-through)
+        """
+        batch_size = observations.size(0)
+        
+        # Convert observation to graph
+        node_features, edge_index = self.graph_builder.obs_to_graph(observations)
+        # node_features: [B, N, C+2] where N = grid_size^2
+        
+        # Apply GAT
+        node_embeddings = self.gat(node_features, edge_index)
+        # node_embeddings: [B, N, hidden_dim]
+        
+        # 【サイズ非依存】Graph Pooling
+        # ノード数Nが変わっても、集約後の次元は一定
+        mean_pool = node_embeddings.mean(dim=1)  # [B, hidden_dim]
+        max_pool = node_embeddings.max(dim=1)[0]  # [B, hidden_dim]
+        sum_pool = node_embeddings.sum(dim=1)  # [B, hidden_dim]
+        
+        # Concatenate aggregations
+        aggregated = torch.cat([mean_pool, max_pool, sum_pool], dim=-1)
+        # aggregated: [B, hidden_dim * 3]
+        
+        # MLP to chance distribution
+        chance_encoding = self.mlp(aggregated)
+        # chance_encoding: [B, chance_space_size]
+        
+        # Apply one-hot argmax with straight-through estimator
+        chance_onehot = self.onehot_argmax(chance_encoding)
+        # chance_onehot: [B, chance_space_size]
+        
+        return chance_encoding, chance_onehot
+
+
 class GATRepresentationNetwork(nn.Module):
     """
     GAT-based Representation Network
     Converts observation to latent state using Graph Attention Network instead of CNN
+    
+    【パフォーマンス最適化 B-1, B-3】
+    - デフォルトのエッジモードを 'adjacent' に変更（88→56エッジ、約30%削減）
+    - 計算量とメモリ使用量を削減
+    - 正規化タイプをカスタマイズ可能
     """
     
     def __init__(
@@ -47,9 +223,10 @@ class GATRepresentationNetwork(nn.Module):
         num_gnn_layers: int = 3,
         num_heads: int = 4,
         grid_size: int = 4,
-        include_row_col_edges: bool = True,
+        include_row_col_edges: bool = False,  # 【最適化B-1】デフォルトでadjacentモード
         dropout: float = 0.0,
-        edge_mode: str = 'sparse',
+        edge_mode: str = 'adjacent',  # 【最適化B-1】最速のadjacentモードをデフォルトに
+        norm_type: str = 'layer',  # 【最適化B-3】正規化タイプ（'layer'/'group'/'none'）
     ):
         """
         Args:
@@ -58,29 +235,39 @@ class GATRepresentationNetwork(nn.Module):
             num_gnn_layers: Number of GAT layers
             num_heads: Number of attention heads
             grid_size: Grid size (4 for 4x4)
-            include_row_col_edges: Whether to include row/column edges
+            include_row_col_edges: 【最適化B-1】デフォルトFalse（adjacentモード）
             dropout: Dropout rate
-            edge_mode: Edge connectivity - 'adjacent', 'sparse', or 'full'
+            edge_mode: 【最適化B-1】'adjacent'（最速）、'sparse'（中速）、'full'（最遅）
+            norm_type: 【最適化B-3】'layer'（安定）、'group'（高速推奨）、'none'（最速）
         """
         super().__init__()
         self.observation_shape = observation_shape
         self.num_channels = num_channels
         self.grid_size = grid_size
         
-        # Graph builder with optimized edge mode (same as GNN)
-        self.graph_builder = GraphBuilder(grid_size, include_row_col_edges, edge_mode)
+        # 【最適化B-1】スパースグラフ構造を使用（adjacentモード推奨）
+        # adjacent: 約56エッジ（最速、メモリ効率最良）
+        # sparse: 約88エッジ（中速）
+        # full: 約200エッジ（最遅、メモリ使用量大）
+        self.graph_builder = GraphBuilder(
+            grid_size, 
+            include_row_col_edges, 
+            edge_mode,
+            device=None  # 【最適化A-1】初回アクセス時に自動設定
+        )
         
         # Input dimension: observation channels + 2 (positional encoding)
         in_dim = observation_shape[0] + 2
         
-        # GAT encoder with multi-head attention
+        # 【最適化A-2, A-3, B-3】GAT encoder with multi-head attention
         self.gat = GraphAttention(
             in_dim=in_dim,
             hidden_dim=num_channels,
             num_layers=num_gnn_layers,
             num_heads=num_heads,
             dropout=dropout,
-            use_bn=True
+            use_bn=True,
+            norm_type=norm_type  # 【最適化B-3】GroupNorm推奨（'group'）
         )
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -93,7 +280,7 @@ class GATRepresentationNetwork(nn.Module):
         """
         batch_size = x.size(0)
         
-        # Convert observation to graph representation
+        # 【最適化A-1】グラフ変換（キャッシュとデバイス最適化済み）
         node_features, edge_index = self.graph_builder.obs_to_graph(x)
         
         # Apply GAT
@@ -127,12 +314,13 @@ class GATValueHead(nn.Module):
         aggregated_dim = num_channels * 3
         
         # MLP for value prediction
+        # 【最適化D-1】インプレース演算でメモリ削減
         layers = []
         dims = [aggregated_dim] + list(hidden_channels) + [value_support_size]
         for i in range(len(dims) - 1):
             layers.append(nn.Linear(dims[i], dims[i+1]))
             if i < len(dims) - 2:
-                layers.append(nn.ReLU())
+                layers.append(nn.ReLU(inplace=True))
         
         self.mlp = nn.Sequential(*layers)
         
@@ -188,12 +376,13 @@ class GATPolicyHead(nn.Module):
         aggregated_dim = num_channels * 3
         
         # MLP for policy prediction
+        # 【最適化D-1】インプレース演算でメモリ削減
         layers = []
         dims = [aggregated_dim] + list(hidden_channels) + [action_space_size]
         for i in range(len(dims) - 1):
             layers.append(nn.Linear(dims[i], dims[i+1]))
             if i < len(dims) - 2:
-                layers.append(nn.ReLU())
+                layers.append(nn.ReLU(inplace=True))
         
         self.mlp = nn.Sequential(*layers)
         
@@ -274,6 +463,10 @@ class GATDynamicsNetwork(nn.Module):
     """
     GAT-based Dynamics Network
     Predicts next latent state and reward given current state and action
+    
+    【パフォーマンス最適化 B-1, B-3】
+    - adjacentモードをデフォルトに
+    - 正規化タイプをカスタマイズ可能
     """
     
     def __init__(
@@ -286,28 +479,35 @@ class GATDynamicsNetwork(nn.Module):
         grid_size: int = 4,
         reward_head_hidden_channels: SequenceType = [128, 64],
         last_linear_layer_init_zero: bool = True,
-        include_row_col_edges: bool = True,
-        edge_mode: str = 'sparse',
+        include_row_col_edges: bool = False,  # 【最適化B-1】adjacentモード
+        edge_mode: str = 'adjacent',  # 【最適化B-1】最速モード
+        norm_type: str = 'layer',  # 【最適化B-3】正規化タイプ
     ):
         super().__init__()
         self.num_channels = num_channels
         self.grid_size = grid_size
         self.num_nodes = grid_size * grid_size
         
-        # Graph builder with optimized edge mode
-        self.graph_builder = GraphBuilder(grid_size, include_row_col_edges, edge_mode)
+        # 【最適化A-1, B-1】Graph builder with optimized edge mode
+        self.graph_builder = GraphBuilder(
+            grid_size, 
+            include_row_col_edges, 
+            edge_mode,
+            device=None
+        )
         
         # Action encoding: broadcast action to all nodes
         self.action_encoder = nn.Linear(action_space_size, num_channels)
         
-        # GAT to predict next state
+        # 【最適化A-2, A-3, B-3】GAT to predict next state
         self.gat = GraphAttention(
             in_dim=num_channels * 2,  # state + encoded action
             hidden_dim=num_channels,
             num_layers=num_gnn_layers,
             num_heads=num_heads,
             dropout=0.0,
-            use_bn=True
+            use_bn=True,
+            norm_type=norm_type  # 【最適化B-3】GroupNorm推奨
         )
         
         # Reward head (similar to value head)
@@ -511,39 +711,76 @@ class GATStochasticMuZeroModel(nn.Module):
             last_linear_layer_init_zero=last_linear_layer_init_zero,
         )
         
-        # Chance encoder - needs to match ChanceEncoder interface from stochastic_muzero_model.py
-        from .stochastic_muzero_model import ChanceEncoder
-        self.chance_encoder = ChanceEncoder(
-            observation_shape, chance_space_size, encoder_backbone_type='conv'
+        # 【完全GAT化】Chance Encoder - GAT版を使用（転移学習対応）
+        # CNN版からGAT版に変更し、サイズ非依存の設計を実現
+        # 注意: ChanceEncoderは2つの連続フレームを結合して入力するため、
+        #      observation_shape のチャンネル数を2倍にする必要がある
+        chance_encoder_obs_shape = (observation_shape[0] * 2, observation_shape[1], observation_shape[2])
+        self.chance_encoder = GATChanceEncoder(
+            observation_shape=chance_encoder_obs_shape,  # 32チャンネル（16×2フレーム）
+            chance_space_size=chance_space_size,
+            num_gnn_layers=2,  # ChanceEncoderは軽量化（2層）
+            num_heads=num_heads,
+            hidden_dim=64,  # 軽量化のため64次元
+            edge_mode=edge_mode,  # 最適化設定を継承
+            norm_type='layer',  # LayerNormで安定性重視（GroupNormは形状の問題あり）
+            include_row_col_edges=include_row_col_edges,
         )
         
-        # CNN使用を防止するバリデーション
-        self._validate_no_cnn_in_gat_components()
+        # 【バリデーション】完全GAT化のため、すべてのコンポーネントをチェック
+        self._validate_fully_gat()
     
-    def _validate_no_cnn_in_gat_components(self):
+    def _validate_fully_gat(self):
         """
-        GAT部分（representation, dynamics）にCNNが使われていないことを確認
-        chance_encoderのCNNは除外（チャンスノード用として許可）
+        【完全GAT化バリデーション】
+        すべてのコンポーネント（chance_encoderを含む）がGATベースであることを確認
         
-        このメソッドは初期化時に呼ばれ、GATモデルが誤ってCNNコンポーネントを
-        使用しないことを保証します。
+        このメソッドは初期化時に呼ばれ、GATモデルがCNNコンポーネントを
+        一切使用しないことを保証します。
+        
+        チェック対象:
+        - representation_network: GAT ✅
+        - dynamics_network: GAT ✅
+        - afterstate_dynamics_network: GAT ✅
+        - prediction_network: GAT ✅
+        - afterstate_prediction_network: GAT ✅
+        - chance_encoder: GAT ✅（CNN版から変更）
         """
-        prohibited_cnn_types = ['Conv2d', 'ResBlock', 'BatchNorm2d']
+        prohibited_cnn_types = ['Conv2d', 'ResBlock', 'BatchNorm2d', 'ConvTranspose2d']
         
+        cnn_found = []
         for name, module in self.named_modules():
             module_type = type(module).__name__
             
-            # chance_encoder以外でCNNレイヤーを検出
-            if 'chance_encoder' not in name:
-                if any(cnn_type in module_type for cnn_type in prohibited_cnn_types):
-                    raise RuntimeError(
-                        f"❌ GAT部分でCNNレイヤーが検出されました！\n"
-                        f"   検出場所: {name}\n"
-                        f"   レイヤータイプ: {module_type}\n"
-                        f"   このモデルはGraph Attention Network (GAT)ベースです。\n"
-                        f"   CNNレイヤー（Conv2d, ResBlock, BatchNorm2d）の使用は禁止されています。\n"
-                        f"   例外: chance_encoderのみCNNが許可されています。"
-                    )
+            # すべてのコンポーネントでCNNレイヤーを検出
+            if any(cnn_type in module_type for cnn_type in prohibited_cnn_types):
+                cnn_found.append((name, module_type))
+        
+        if cnn_found:
+            error_msg = (
+                f"❌ 完全GAT化エラー: CNNレイヤーが検出されました！\n\n"
+                f"このモデルは完全にGraph Attention Network (GAT)ベースです。\n"
+                f"CNNレイヤーは一切使用できません。\n\n"
+                f"検出されたCNNレイヤー:\n"
+            )
+            for name, module_type in cnn_found:
+                error_msg += f"  - {name}: {module_type}\n"
+            
+            error_msg += (
+                f"\n💡 修正方法:\n"
+                f"  1. chance_encoderがGATChanceEncoderを使用していることを確認\n"
+                f"  2. 他のコンポーネントでCNNが誤って使用されていないか確認\n"
+            )
+            raise RuntimeError(error_msg)
+        
+        # 成功メッセージ
+        print("✅ 完全GAT化バリデーション成功: すべてのコンポーネントがGATベースです")
+        print("   - representation_network: GAT ✅")
+        print("   - dynamics_network: GAT ✅")
+        print("   - afterstate_dynamics_network: GAT ✅")
+        print("   - prediction_network: GAT ✅")
+        print("   - afterstate_prediction_network: GAT ✅")
+        print("   - chance_encoder: GATChanceEncoder ✅（転移学習対応）")
         
         # GATコンポーネントの存在確認
         has_graphattention = False
@@ -681,3 +918,80 @@ class GATStochasticMuZeroModel(nn.Module):
             with torch.no_grad():
                 proj = proj / (torch.norm(proj, dim=-1, keepdim=True) + 1e-8)
                 return proj
+
+
+# ============================================================================
+# 【最適化D-2, D-3】高速化ヘルパー関数
+# ============================================================================
+
+def optimize_gat_model_for_speed(
+    model: GATStochasticMuZeroModel,
+    use_mixed_precision: bool = True,
+    use_compile: bool = True,
+    compile_mode: str = 'default'
+) -> GATStochasticMuZeroModel:
+    """
+    GATモデルに高速化最適化を適用
+    
+    【最適化D-2】Mixed Precision Training (FP16)
+    - 期待効果: 10-20%高速化、メモリ使用量50%削減
+    - トレーニングループでtorch.cuda.amp.autocast()を使用
+    
+    【最適化D-3】torch.compile() (PyTorch 2.0+)
+    - 期待効果: 15-30%高速化
+    - グラフ最適化とカーネル融合を自動実行
+    
+    Args:
+        model: 最適化するGATモデル
+        use_mixed_precision: FP16を使用するか（推奨: True）
+        use_compile: torch.compile()を使用するか（推奨: True、PyTorch 2.0+のみ）
+        compile_mode: コンパイルモード
+                     - 'default': バランス（推奨）
+                     - 'reduce-overhead': 低オーバーヘッド
+                     - 'max-autotune': 最大最適化（遅い初回コンパイル）
+    
+    Returns:
+        最適化されたモデル
+    
+    使用例:
+        >>> model = GATStochasticMuZeroModel(...)
+        >>> model = optimize_gat_model_for_speed(model)
+        >>> 
+        >>> # トレーニングループ内
+        >>> scaler = torch.cuda.amp.GradScaler()  # FP16用
+        >>> with torch.cuda.amp.autocast():
+        >>>     output = model(obs)
+        >>>     loss = compute_loss(output)
+        >>> scaler.scale(loss).backward()
+        >>> scaler.step(optimizer)
+        >>> scaler.update()
+    """
+    import sys
+    
+    # 【最適化D-3】torch.compile() (PyTorch 2.0+)
+    if use_compile:
+        try:
+            import torch
+            if hasattr(torch, 'compile'):
+                print(f"🚀 torch.compile()を適用中 (mode={compile_mode})...")
+                model = torch.compile(model, mode=compile_mode)
+                print("✅ torch.compile()適用完了！15-30%の高速化が期待されます")
+            else:
+                print("⚠️  PyTorch 2.0+が必要です。torch.compile()をスキップします")
+        except Exception as e:
+            print(f"⚠️  torch.compile()のエラー: {e}")
+    
+    # 【最適化D-2】Mixed Precision情報を表示
+    if use_mixed_precision:
+        print("💡 Mixed Precision (FP16)を有効化するには:")
+        print("   トレーニングループで以下を使用してください:")
+        print("   scaler = torch.cuda.amp.GradScaler()")
+        print("   with torch.cuda.amp.autocast():")
+        print("       output = model(obs)")
+        print("       loss = compute_loss(output)")
+        print("   scaler.scale(loss).backward()")
+        print("   scaler.step(optimizer)")
+        print("   scaler.update()")
+        print("   期待効果: 10-20%高速化 + メモリ50%削減")
+    
+    return model

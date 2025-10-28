@@ -1,0 +1,131 @@
+[2025-10-27 04:05:58][base_learner.py:360][INFO] [RANK0]: DI-engine DRL Policy
+GATStochasticMuZeroModel(
+  (representation_network): GATRepresentationNetwork(
+    (gat): GraphAttention(
+      (convs): ModuleList(
+        (0): GraphAttentionConv(
+          (lin): Linear(in_features=18, out_features=512, bias=False)
+        )
+        (1-2): 2 x GraphAttentionConv(
+          (lin): Linear(in_features=512, out_features=512, bias=False)
+        )
+      )
+      (norms): ModuleList(
+        (0-1): 2 x LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+  )
+  (prediction_network): GATPredictionNetwork(
+    (value_head): GATValueHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU(inplace=True)
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU(inplace=True)
+        (4): Linear(in_features=64, out_features=601, bias=True)
+      )
+    )
+    (policy_head): GATPolicyHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU(inplace=True)
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU(inplace=True)
+        (4): Linear(in_features=64, out_features=4, bias=True)
+      )
+    )
+  )
+  (dynamics_network): GATDynamicsNetwork(
+    (action_encoder): Linear(in_features=4, out_features=128, bias=True)
+    (gat): GraphAttention(
+      (convs): ModuleList(
+        (0): GraphAttentionConv(
+          (lin): Linear(in_features=256, out_features=512, bias=False)
+        )
+        (1-2): 2 x GraphAttentionConv(
+          (lin): Linear(in_features=512, out_features=512, bias=False)
+        )
+      )
+      (norms): ModuleList(
+        (0-1): 2 x LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+    (reward_head): Sequential(
+      (0): Linear(in_features=384, out_features=128, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=128, out_features=64, bias=True)
+      (3): ReLU()
+      (4): Linear(in_features=64, out_features=601, bias=True)
+    )
+  )
+  (afterstate_dynamics_network): GATDynamicsNetwork(
+    (action_encoder): Linear(in_features=32, out_features=128, bias=True)
+    (gat): GraphAttention(
+      (convs): ModuleList(
+        (0): GraphAttentionConv(
+          (lin): Linear(in_features=256, out_features=512, bias=False)
+        )
+        (1-2): 2 x GraphAttentionConv(
+          (lin): Linear(in_features=512, out_features=512, bias=False)
+        )
+      )
+      (norms): ModuleList(
+        (0-1): 2 x LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+    (reward_head): Sequential(
+      (0): Linear(in_features=384, out_features=128, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=128, out_features=64, bias=True)
+      (3): ReLU()
+      (4): Linear(in_features=64, out_features=601, bias=True)
+    )
+  )
+  (afterstate_prediction_network): GATPredictionNetwork(
+    (value_head): GATValueHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU(inplace=True)
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU(inplace=True)
+        (4): Linear(in_features=64, out_features=601, bias=True)
+      )
+    )
+    (policy_head): GATPolicyHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU(inplace=True)
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU(inplace=True)
+        (4): Linear(in_features=64, out_features=32, bias=True)
+      )
+    )
+  )
+  (chance_encoder): GATChanceEncoder(
+    (gat): GraphAttention(
+      (convs): ModuleList(
+        (0): GraphAttentionConv(
+          (lin): Linear(in_features=34, out_features=256, bias=False)
+        )
+        (1): GraphAttentionConv(
+          (lin): Linear(in_features=256, out_features=256, bias=False)
+        )
+      )
+      (norms): ModuleList(
+        (0): LayerNorm((256,), eps=1e-05, elementwise_affine=True)
+        (1): LayerNorm((64,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+    (mlp): Sequential(
+      (0): Linear(in_features=192, out_features=128, bias=True)
+      (1): ReLU(inplace=True)
+      (2): Linear(in_features=128, out_features=64, bias=True)
+      (3): ReLU(inplace=True)
+      (4): Linear(in_features=64, out_features=32, bias=True)
+    )
+    (onehot_argmax): StraightThroughEstimator()
+  )
+)

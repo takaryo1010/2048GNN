@@ -1,0 +1,153 @@
+b885044
+
+commit b885044102467767a5ffa0d628841e369bde2df2
+Merge: 367ce3c 13326a7
+Author: takaryo1010 <t.ryota1010@gmail.com>
+Date:   Mon Oct 27 03:21:57 2025 +0000
+
+    Merge branch 'main' of https://github.com/takaryo1010/2048GNN into main
+
+commit 367ce3ce3dbcac1602603a5ac6a678afeccbb866
+Author: takaryo1010 <t.ryota1010@gmail.com>
+Date:   Mon Oct 27 03:20:30 2025 +0000
+
+    add GAT
+
+ GAT_REFACTORING_SPECIFICATION.md                   | 773 +++++++++++++++++++++
+ GNN_3X3_SUCCESS.md                                 | 120 ----
+ GNN_IMPLEMENTATION_SUCCESS.md                      | 131 ----
+ GNN_IMPLEMENTATION_SUMMARY.md                      | 173 -----
+ GNN_MIGRATION_PROMPT_JA.md                         | 209 ------
+ GNN_NO_CNN_POLICY.md                               |  67 --
+ GNN_OPTIMIZATION_COMPLETE.md                       | 209 ------
+ GNN_OPTIMIZATION_SUMMARY.md                        | 182 -----
+ GNN_SPEEDUP_QUICK_REF.md                           | 133 ----
+ GNN_SPEEDUP_REPORT.md                              | 197 ------
+ GNN_VERIFICATION_CHECKLIST.md                      | 185 -----
+ GNN_VERIFICATION_REPORT.md                         | 293 --------
+ .../config/stochastic_muzero_2048_gat_config.py    |   2 +-
+ SPEED_COMPARISON_REPORT.md                         | 203 ------
+ analyze_gat_slowness.py                            | 421 +++++++++++
+ compare_gat_vs_cnn.py                              | 293 ++++++++
+ compare_gnn_vs_cnn.py                              | 282 --------
+ eval_gnn_to_video.py                               | 145 ----
+ evaluate_model_detailed.py                         | 291 --------
+ evaluate_model_performance.py                      | 202 ------
+ evaluate_performance.py                            | 305 --------
+ final_speedup_report.py                            | 586 +++++++++-------
+ test_full_model_speed.py                           | 143 ----
+ test_gat_config.py                                 |  52 --
+ test_gat_imports_simple.py                         |  78 ---
+ test_gat_model.py                                  | 152 ----
+ test_gat_runtime.py                                | 136 ----
+ test_gat_training_config.py                        | 134 ----
+ test_gat_usage.py                                  | 131 ----
+ test_gnn_model.py                                  | 256 -------
+ test_gnn_model_basic.py                            | 203 ------
+ test_gnn_speedup.py                                | 110 ---
+ test_policy_registry.py                            |  65 --
+ test_standard_policy_gat.py                        | 147 ----
+ test_training_speed.sh                             |  27 -
+ test_training_with_monitoring.sh                   |  73 --
+ test_validation.py                                 |  45 --
+ 37 files changed, 1835 insertions(+), 5319 deletions(-)
+
+commit 5fd745f8fcba156c8a930a50539cbf56a7833a3e
+Author: takaryo1010 <t.ryota1010@gmail.com>
+Date:   Wed Oct 22 06:06:02 2025 +0000
+
+    add GAT
+
+ GAT_IMPLEMENTATION_COMPLETE.md                     |  377 ++++
+ GAT_IMPLEMENTATION_SUMMARY.md                      |  273 +++
+ GNN_NO_CNN_POLICY.md                               |   67 +
+ GNN_VERIFICATION_REPORT.md                         |  293 +++
+ .../lzero/model/gat_stochastic_muzero_model.py     | 1245 +++++-------
+ LightZero/lzero/model/gat_utils.py                 |  254 +++
+ .../lzero/model/gnn_stochastic_muzero_model.py     |   69 +
+ LightZero/lzero/model/no_cnn_allowed.py            |   38 +
+ LightZero/lzero/model/stochastic_muzero_model.py   |    2 +
+ LightZero/lzero/policy/stochastic_muzero.py        |    4 +
+ LightZero/zoo/game_2048/config/gat_2048_config.py  |  131 --
+ .../zoo/game_2048/config/gat_muzero_2048_config.py |  119 --
+ .../game_2048/config/gat_stochastic_2048_config.py |  291 ---
+ .../config/stochastic_muzero_2048_gat_config.py    |  148 ++
+ README_GAT.md                                      |  242 +++
+ compare_gnn_vs_cnn.py                              |  282 +++
+ .../formatted_total_config.py                      |  247 +++
+ .../git_diff.txt                                   | 2084 ++++++++++++++++++++
+ .../git_log.txt                                    |  488 +++++
+ .../log/collector/collector_logger.txt             |    0
+ .../log/learner/learner_logger.txt                 |  117 ++
+ .../events.out.tfevents.1761103313.e5d9eb720194    |  Bin 0 -> 40 bytes
+ .../total_config.py                                |  247 +++
+ .../ckpt/ckpt_best.pth.tar                         |  Bin 0 -> 20409346 bytes
+ .../formatted_total_config.py                      |  247 +++
+ .../git_diff.txt                                   | 2084 ++++++++++++++++++++
+ .../git_log.txt                                    |  488 +++++
+ .../log/collector/collector_logger.txt             |    0
+ .../log/evaluator/evaluator_logger.txt             |   25 +
+ .../log/learner/learner_logger.txt                 |  118 ++
+ .../events.out.tfevents.1761103728.e5d9eb720194    |  Bin 0 -> 1828 bytes
+ .../total_config.py                                |  247 +++
+ .../ckpt/ckpt_best.pth.tar                         |  Bin 0 -> 20409346 bytes
+ .../ckpt/iteration_0.pth.tar                       |  Bin 0 -> 40047432 bytes
+ .../ckpt/iteration_20.pth.tar                      |  Bin 0 -> 40047893 bytes
+ .../formatted_total_config.py                      |  247 +++
+ .../git_diff.txt                                   | 2084 ++++++++++++++++++++
+ .../git_log.txt                                    |  488 +++++
+ .../log/collector/collector_logger.txt             |    1 +
+ .../log/evaluator/evaluator_logger.txt             |   23 +
+ .../log/learner/learner_logger.txt                 |  148 ++
+ .../events.out.tfevents.1761103940.e5d9eb720194    |  Bin 0 -> 5145 bytes
+ .../total_config.py                                |  247 +++
+ .../formatted_total_config.py                      |  246 +++
+ .../git_diff.txt                                   |    0
+ .../git_log.txt                                    |  488 +++++
+ .../log/collector/collector_logger.txt             |    0
+ .../log/evaluator/evaluator_logger.txt             |    0
+ .../log/learner/learner_logger.txt                 |  114 ++
+ .../events.out.tfevents.1760007613.e5d9eb720194    |  Bin 0 -> 40 bytes
+ .../total_config.py                                |  246 +++
+ .../ckpt/ckpt_best.pth.tar                         |  Bin 0 -> 8178618 bytes
+ .../ckpt/iteration_0.pth.tar                       |  Bin 0 -> 15584186 bytes
+ .../formatted_total_config.py                      |  246 +++
+ .../git_diff.txt                                   |  100 +
+ .../git_log.txt                                    |  488 +++++
+ .../log/collector/collector_logger.txt             |   16 +
+ .../log/evaluator/evaluator_logger.txt             |   25 +
+ .../log/learner/learner_logger.txt                 |  228 +++
+ .../events.out.tfevents.1760009163.e5d9eb720194    |  Bin 0 -> 15875 bytes
+ .../total_config.py                                |  246 +++
+ debug_training_flow.py                             |  464 +++++
+ quick_gat_training_test.py                         |   80 +
+ run_gat_test.sh                                    |   16 +
+ test_gat_model_simple.py                           |  142 ++
+ test_validation.py                                 |   45 +
+ train_gnn_debug.py                                 |  366 ++++
+ validate_no_cnn.py                                 |  347 ++++
+ verify_gnn_detailed.py                             |  277 +++
+ verify_gnn_usage.py                                |  237 +++
+ 70 files changed, 16625 insertions(+), 1257 deletions(-)
+
+commit 13326a7ab75612cf1f28729e832dd9e9f29ca1af
+Merge: 062b1c8 0437f4e
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Sat Oct 11 08:20:22 2025 +0000
+
+    Merge branch 'main' of https://github.com/takaryo1010/2048GNN into main
+
+commit 062b1c8539f4622298c863a4923772472e4fe139
+Author: takaryo1010 <117000270+takaryo1010@users.noreply.github.com>
+Date:   Sat Oct 11 08:20:10 2025 +0000
+
+    fix:score eval
+
+ __pycache__/cnn_any_size_emulator.cpython-38.pyc | Bin 18566 -> 18592 bytes
+ __pycache__/gnn_any_size_emulator.cpython-38.pyc | Bin 31716 -> 31716 bytes
+ cnn_any_size_emulator.py                         |   7 +
+ gnn_any_size_emulator.py                         |   7 +
+ test_legal_actions_bug.py                        | 159 ++++++++++++++++++++
+ verify_evaluation_equivalence.py                 | 179 +++++++++++++++++++++++
+ verify_no_difference.py                          | 118 +++++++++++++++
+ 7 files changed, 470 insertions(+)

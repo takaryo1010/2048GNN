@@ -1,0 +1,118 @@
+[2025-10-27 03:42:21][base_learner.py:360][INFO] [RANK0]: DI-engine DRL Policy
+GATStochasticMuZeroModel(
+  (representation_network): GATRepresentationNetwork(
+    (gat): GraphAttention(
+      (convs): ModuleList(
+        (0): GraphAttentionConv(
+          (lin): Linear(in_features=18, out_features=512, bias=False)
+        )
+        (1-2): 2 x GraphAttentionConv(
+          (lin): Linear(in_features=512, out_features=512, bias=False)
+        )
+      )
+      (norms): ModuleList(
+        (0-1): 2 x LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+  )
+  (prediction_network): GATPredictionNetwork(
+    (value_head): GATValueHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU(inplace=True)
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU(inplace=True)
+        (4): Linear(in_features=64, out_features=601, bias=True)
+      )
+    )
+    (policy_head): GATPolicyHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU(inplace=True)
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU(inplace=True)
+        (4): Linear(in_features=64, out_features=4, bias=True)
+      )
+    )
+  )
+  (dynamics_network): GATDynamicsNetwork(
+    (action_encoder): Linear(in_features=4, out_features=128, bias=True)
+    (gat): GraphAttention(
+      (convs): ModuleList(
+        (0): GraphAttentionConv(
+          (lin): Linear(in_features=256, out_features=512, bias=False)
+        )
+        (1-2): 2 x GraphAttentionConv(
+          (lin): Linear(in_features=512, out_features=512, bias=False)
+        )
+      )
+      (norms): ModuleList(
+        (0-1): 2 x LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+    (reward_head): Sequential(
+      (0): Linear(in_features=384, out_features=128, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=128, out_features=64, bias=True)
+      (3): ReLU()
+      (4): Linear(in_features=64, out_features=601, bias=True)
+    )
+  )
+  (afterstate_dynamics_network): GATDynamicsNetwork(
+    (action_encoder): Linear(in_features=32, out_features=128, bias=True)
+    (gat): GraphAttention(
+      (convs): ModuleList(
+        (0): GraphAttentionConv(
+          (lin): Linear(in_features=256, out_features=512, bias=False)
+        )
+        (1-2): 2 x GraphAttentionConv(
+          (lin): Linear(in_features=512, out_features=512, bias=False)
+        )
+      )
+      (norms): ModuleList(
+        (0-1): 2 x LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+    (reward_head): Sequential(
+      (0): Linear(in_features=384, out_features=128, bias=True)
+      (1): ReLU()
+      (2): Linear(in_features=128, out_features=64, bias=True)
+      (3): ReLU()
+      (4): Linear(in_features=64, out_features=601, bias=True)
+    )
+  )
+  (afterstate_prediction_network): GATPredictionNetwork(
+    (value_head): GATValueHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU(inplace=True)
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU(inplace=True)
+        (4): Linear(in_features=64, out_features=601, bias=True)
+      )
+    )
+    (policy_head): GATPolicyHead(
+      (mlp): Sequential(
+        (0): Linear(in_features=384, out_features=128, bias=True)
+        (1): ReLU(inplace=True)
+        (2): Linear(in_features=128, out_features=64, bias=True)
+        (3): ReLU(inplace=True)
+        (4): Linear(in_features=64, out_features=32, bias=True)
+      )
+    )
+  )
+  (chance_encoder): ChanceEncoder(
+    (encoder): ChanceEncoderBackbone(
+      (conv1): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (conv2): Conv2d(32, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      (fc1): Linear(in_features=1024, out_features=128, bias=True)
+      (fc2): Linear(in_features=128, out_features=64, bias=True)
+      (fc3): Linear(in_features=64, out_features=32, bias=True)
+    )
+    (onehot_argmax): StraightThroughEstimator()
+  )
+)
+[2025-10-27 03:42:55][base_learner.py:360][INFO] [RANK0]: learner save ckpt in ./data_gat_stochastic_mz/game_2048_gat_npct-2_ns100_upc200_rer0.0_bs512_gat3L128D_h4_adjacent_seed0/ckpt/ckpt_best.pth.tar
