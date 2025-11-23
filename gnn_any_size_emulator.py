@@ -1081,7 +1081,7 @@ def main():
     parser.add_argument('--episodes', type=int, default=10,
                        help='実行するエピソード数 (デフォルト: 10)')
     parser.add_argument('--model-path', type=str,
-                       default='/opendilab/2048GNN/LightZero/zoo/game_2048/config/data_gnn_stochastic_mz/gnn_simple_success1/ckpt/iteration_79400.pth.tar',
+                       default='/opendilab/2048GNN/data_gnn_stochastic_mz_optimized/game_2048_gnn_opt_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0/ckpt/iteration_60000.pth.tar',
                        help='学習済みモデルのパス（省略時は grid-size に応じて自動選択）')
     parser.add_argument('--render', action='store_true',
                        help='リアルタイムで盤面を表示')
@@ -1103,36 +1103,34 @@ def main():
     # モデルパスの自動選択
     if args.model_path is None:
         if args.grid_size == 3:
-            args.model_path = '/opendilab/2048GNN/LightZero/zoo/game_2048/config/data_gnn_stochastic_mz_3x3/game_2048_gnn_3x3_npct-2_ns50_upc100_rer0.0_bs256_gnn2L96D_adjacent_seed0_resume_251008_215736/ckpt/iteration_60000.pth.tar'
-        elif args.grid_size == 4:
+            # 3x3用モデルを探す
+            possible_paths_3x3 = [
+                '/opendilab/2048GNN/data_gnn_stochastic_mz_3x3/game_2048_gnn_3x3_npct-2_ns50_upc100_rer0.0_bs256_gnn2L96D_adjacent_seed0/ckpt/ckpt_best.pth.tar',
+            ]
+            for path in possible_paths_3x3:
+                if os.path.exists(path):
+                    args.model_path = path
+                    break
+        
+        # デフォルトまたは4x4の場合
+        if args.model_path is None:
             # 4×4のデフォルトモデルを探す（最新の最適化版を優先）
             possible_paths = [
-                '/opendilab/2048GNN/LightZero/data_gnn_stochastic_mz_optimized/game_2048_gnn_opt_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251011_032638/ckpt/ckpt_best.pth.tar',
-                '/opendilab/2048GNN/LightZero/data_gnn_stochastic_mz_optimized/game_2048_gnn_opt_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251011_032515/ckpt/ckpt_best.pth.tar',
-                '/opendilab/2048GNN/LightZero/data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251007_230441/ckpt/ckpt_best.pth.tar',
+                '/opendilab/2048GNN/data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251009_112544/ckpt/ckpt_best.pth.tar',
+                '/opendilab/2048GNN/data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251010_145740/ckpt/ckpt_best.pth.tar',
+                '/opendilab/2048GNN/data_gnn_stochastic_mz/game_2048_gnn_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251010_145517/ckpt/ckpt_best.pth.tar',
             ]
             for path in possible_paths:
                 if os.path.exists(path):
                     args.model_path = path
                     break
+            
             if args.model_path is None:
-                print(f"エラー: 4×4用の学習済みモデルが見つかりません。")
-                print("--model-path オプションでモデルパスを指定してください。")
-                sys.exit(1)
-        else:
-            print(f"警告: grid-size {args.grid_size} 用のデフォルトモデルはありません。")
-            print("4×4モデルで試行します（転移学習）...")
-            # 4×4モデルをフォールバックとして使用
-            possible_paths = [
-                '/opendilab/2048GNN/LightZero/data_gnn_stochastic_mz_optimized/game_2048_gnn_opt_npct-2_ns100_upc200_rer0.0_bs512_gnn3L128D_sparse_seed0_251011_032638/ckpt/ckpt_best.pth.tar',
-            ]
-            for path in possible_paths:
-                if os.path.exists(path):
-                    args.model_path = path
-                    break
-            if args.model_path is None:
-                print(f"エラー: フォールバック用のモデルも見つかりません。")
-                print("--model-path オプションでモデルパスを指定してください。")
+                print(f"エラー: 学習済みモデルが見つかりません。")
+                print("以下のディレクトリを確認してください:")
+                print("  - /opendilab/2048GNN/data_gnn_stochastic_mz/")
+                print("  - /opendilab/2048GNN/data_gnn_stochastic_mz_3x3/")
+                print("\nまたは --model-path オプションでモデルパスを指定してください。")
                 sys.exit(1)
     
     # モデルパスの存在確認
